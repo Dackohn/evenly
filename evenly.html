@@ -1,0 +1,1374 @@
+<title>Evenly</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: ledger app. Fixed sidebar of groups and friends, a working column of balances and expense rows. */
+:root{
+  --paper:#F1F3EF; --surface:#FFFFFF; --sunk:#E6EAE4; --ink:#17201E; --muted:#5A6662; --line:#D5DCD6;
+  --accent:#6E2A5A; --accent-ink:#FFFFFF; --accent-soft:#F2E3EC; --bar:#D9C3D2;
+  --pos:#14775A; --pos-soft:#DCF0E7; --neg:#B0462A; --neg-soft:#F7E2DA; --warn:#8A5A00; --warn-soft:#FBEFD3;
+  --shadow:0 1px 2px rgba(20,30,28,.06),0 8px 24px rgba(20,30,28,.08);
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#111514; --surface:#191F1D; --sunk:#222926; --ink:#E6ECE9; --muted:#9AA6A1; --line:#2D3633;
+  --accent:#DE93C6; --accent-ink:#1C0F18; --accent-soft:#38212F; --bar:#5A3A4F;
+  --pos:#5FCB9F; --pos-soft:#15322A; --neg:#F2906F; --neg-soft:#3A2018; --warn:#E8B85A; --warn-soft:#352A12;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#111514; --surface:#191F1D; --sunk:#222926; --ink:#E6ECE9; --muted:#9AA6A1; --line:#2D3633;
+  --accent:#DE93C6; --accent-ink:#1C0F18; --accent-soft:#38212F; --bar:#5A3A4F;
+  --pos:#5FCB9F; --pos-soft:#15322A; --neg:#F2906F; --neg-soft:#3A2018; --warn:#E8B85A; --warn-soft:#352A12;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.pos{color:var(--pos)} .neg{color:var(--neg)} .mut{color:var(--muted)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+.app{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100%}
+.side{background:var(--surface);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.side-in{display:flex;flex-direction:column;gap:18px;padding:20px 14px 16px;flex:1}
+.brand{display:flex;align-items:center;gap:10px;font:800 22px/1 var(--f-display);padding:0 8px;letter-spacing:-.02em}
+.mark{width:30px;height:30px;border-radius:9px;background:var(--accent);display:grid;place-items:center}
+.mark svg{display:block}
+.mark rect{fill:var(--accent-ink)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.side-h{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:0 8px 4px}
+.side-sec{display:flex;flex-direction:column;gap:2px}
+.item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;padding:7px 8px;border-radius:9px;cursor:pointer;min-width:0}
+.item:hover{background:var(--sunk)}
+.item.on{background:var(--accent-soft);color:var(--ink);font-weight:600}
+.item .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .bal{font:500 12px var(--f-num);white-space:nowrap}
+.mini{background:none;border:0;color:var(--accent);font-weight:700;font-size:12px;cursor:pointer;padding:2px 4px;letter-spacing:0;text-transform:none}
+.side-empty{font-size:13px;color:var(--muted);padding:2px 8px}
+.side-foot{border-top:1px solid var(--line);padding:14px 22px 18px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.side-foot select{width:100%}
+.mode{font-size:12px;color:var(--muted)}
+.ico{width:18px;height:18px;flex:none;color:var(--muted)}
+.item.on .ico{color:var(--accent)}
+
+.main{min-width:0;padding-block:24px 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.vh{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.vh h1{font-size:clamp(26px,3.2vw,34px);font-weight:800;line-height:1.1}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.vh-act{display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:none;border-color:transparent}
+.btn.danger{color:var(--neg)}
+.btn.sm{padding:5px 10px;font-size:13px;border-radius:8px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.link{background:none;border:0;padding:0;color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.card-h h2{font-size:17px;font-weight:700}
+.card-b{padding:14px 18px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+
+.strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.strip>div{padding:16px 20px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.strip>div+div{border-left:1px solid var(--line)}
+.strip .k{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.strip .v{font:600 22px/1.25 var(--f-num);font-variant-numeric:tabular-nums;letter-spacing:-.02em;overflow-wrap:anywhere}
+.strip .v small{display:block;font-size:15px}
+
+.rows{display:flex;flex-direction:column}
+.prow{display:flex;align-items:center;gap:12px;padding:10px 18px;border-top:1px solid var(--line);min-width:0}
+.prow:first-child{border-top:0}
+.prow .who{flex:1;min-width:0}
+.prow .who b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow .who span{font-size:13px;color:var(--muted)}
+.prow .amt{text-align:right;font:600 15px var(--f-num);font-variant-numeric:tabular-nums}
+.av{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;font:700 13px var(--f-body);color:#fff}
+.av.sm{width:26px;height:26px;font-size:11px}
+.avs{display:flex}
+.avs .av{border:2px solid var(--surface);margin-left:-8px}
+.avs .av:first-child{margin-left:0}
+
+.month{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:12px 18px 6px;background:var(--sunk);border-top:1px solid var(--line)}
+.month:first-child{border-top:0;border-radius:14px 14px 0 0}
+.xrow{display:grid;grid-template-columns:44px 12px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:11px 18px;cursor:pointer}
+.month+.xrow{border-top:0}
+.xrow:hover{background:var(--sunk)}
+.xrow .dt{display:flex;flex-direction:column;align-items:center;line-height:1.05;color:var(--muted)}
+.xrow .dt small{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.xrow .dt b{font:600 19px var(--f-num);color:var(--ink)}
+.sw{width:12px;height:12px;border-radius:3px}
+.xrow .t{min-width:0}
+.xrow .t b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xrow .t span{font-size:13px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xrow .r{text-align:right;font-size:12px;line-height:1.3}
+.xrow .r b{display:block;font:600 14px var(--f-num);font-variant-numeric:tabular-nums}
+.xrow.pay .t b{font-weight:500}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;background:var(--sunk);color:var(--muted);vertical-align:1px;margin-left:6px}
+.tag.rec{background:var(--accent-soft);color:var(--accent)}
+
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px}
+.pill.pos{background:var(--pos-soft)} .pill.neg{background:var(--neg-soft)} .pill.z{background:var(--sunk);color:var(--muted)}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 12px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar input[type=search]{flex:1;min-width:180px}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+textarea{resize:vertical;min-height:64px;width:100%}
+
+.empty{padding:28px 20px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty h3{color:var(--ink);font-size:18px}
+.empty p{margin:0;max-width:46ch}
+.note{border-radius:12px;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between;font-size:14px}
+.note.info{background:var(--accent-soft)} .note.warn{background:var(--warn-soft);color:var(--ink)}
+.note p{margin:0;flex:1;min-width:220px}
+
+.hello{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:0;overflow:hidden}
+.hello .l{padding:28px;display:flex;flex-direction:column;gap:14px}
+.hello .l h2{font-size:28px;font-weight:800;line-height:1.1}
+.hello .l p{margin:0;color:var(--muted);max-width:48ch}
+.hello .r{background:var(--sunk);padding:24px 28px;display:flex;flex-direction:column;gap:10px;font-size:14px}
+.hello .r li{margin-bottom:6px}
+.hello ul{margin:0;padding-left:18px}
+.inline{display:flex;gap:8px;flex-wrap:wrap}
+.inline input{flex:1;min-width:160px}
+
+.bars{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) auto;align-items:center;gap:12px;font-size:14px}
+.bar-row .lab{display:flex;align-items:center;gap:8px;min-width:0}
+.bar-row .lab span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track{height:10px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.fill{height:100%;border-radius:99px}
+.chart{width:100%;height:auto;display:block}
+.chart .g{stroke:var(--line);stroke-width:1}
+.chart .tx{fill:var(--muted);font:500 11px var(--f-body)}
+.chart .b1{fill:var(--bar)} .chart .b2{fill:var(--accent)}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.meter{height:12px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.meter div{height:100%;background:var(--pos);border-radius:99px}
+.meter.over div{background:var(--neg)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0}
+
+dialog{border:0;border-radius:16px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);width:min(620px,calc(100vw - 24px));max-height:calc(100dvh - 24px)}
+dialog::backdrop{background:rgba(10,14,13,.45)}
+.dlg{display:flex;flex-direction:column;max-height:calc(100dvh - 24px)}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.dlg-head h2{font-size:20px;font-weight:700}
+.dlg-scroll{overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.dlg-foot{display:flex;justify-content:space-between;gap:8px;padding:12px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
+.dlg-foot .sp{display:flex;gap:8px;margin-left:auto}
+.icon-btn{background:none;border:0;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:22px;line-height:1;color:var(--muted)}
+.icon-btn:hover{background:var(--sunk)}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted);min-width:0}
+.fld input,.fld select,.fld textarea{color:var(--ink);font-weight:400;font-size:15px}
+.row2{display:flex;gap:10px;flex-wrap:wrap}
+.row2>.fld{flex:1 1 120px}
+.row2>.grow{flex:3 1 220px}
+.seg{display:flex;background:var(--sunk);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{flex:1;border:0;background:none;border-radius:8px;padding:6px 8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);white-space:nowrap}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.parts{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px}
+.part{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--line);min-width:0}
+.part:first-child{border-top:0}
+.part label{flex:1;display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}
+.part label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.part input[type=text]{width:96px;text-align:right;font-family:var(--f-num)}
+.part .share{font:500 13px var(--f-num);color:var(--muted);min-width:84px;text-align:right}
+.unit{font-size:12px;color:var(--muted);width:14px}
+.sum{font-size:14px;padding:10px 12px;border-radius:10px;background:var(--sunk)}
+.sum.err{background:var(--neg-soft);color:var(--ink)}
+.sum.ok{background:var(--pos-soft);color:var(--ink)}
+.sub-h{font-size:13px;font-weight:700;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:10px}
+details.more{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+details.more summary{cursor:pointer;font-weight:600;font-size:14px}
+details.more[open] summary{margin-bottom:10px}
+.morein{display:flex;flex-direction:column;gap:12px}
+.chk{display:flex;flex-wrap:wrap;gap:6px}
+.chk label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:4px 10px 4px 6px;font-size:14px;cursor:pointer}
+.chk label:has(input:checked){background:var(--accent-soft);border-color:var(--accent)}
+.big{font:600 34px/1.1 var(--f-num);letter-spacing:-.03em}
+.det-lines{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.det-lines div{display:flex;justify-content:space-between;gap:12px}
+.receipt{max-width:100%;max-height:340px;border-radius:10px;border:1px solid var(--line);object-fit:contain;background:var(--sunk)}
+.cmt{display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-radius:10px;background:var(--sunk);font-size:14px}
+.cmt small{color:var(--muted);font-size:12px}
+.err-t{color:var(--neg);font-size:13px;font-weight:600}
+
+.fab{display:none}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:50;max-width:calc(100vw - 32px)}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+.loading{color:var(--muted);font-size:14px;padding:6px 0}
+
+@media (max-width:900px){
+  .grid3{grid-template-columns:1fr}
+  .hello{grid-template-columns:1fr}
+}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  .side{position:sticky;top:env(safe-area-inset-top,0px);height:auto;z-index:5;border-right:0;border-bottom:1px solid var(--line)}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+  .side-in{flex-direction:row;align-items:center;gap:6px;overflow-x:auto;padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));scrollbar-width:none}
+  .side-in::-webkit-scrollbar{display:none}
+  .brand{font-size:18px;padding:0 6px 0 0}
+  .brand .mark{width:26px;height:26px}
+  .nav,.side-sec{flex-direction:row;gap:4px}
+  .side-h{display:none}
+  .side-sec .side-empty{display:none}
+  .item{width:auto;white-space:nowrap;border:1px solid var(--line);border-radius:99px;padding:5px 12px}
+  .item .bal,.item .ico{display:none}
+  .item .lbl{overflow:visible}
+  .side-foot{display:none}
+  .grid2{grid-template-columns:1fr}
+  .strip{grid-template-columns:1fr}
+  .strip>div+div{border-left:0;border-top:1px solid var(--line)}
+  .vh-act .btn.primary{display:none}
+  .fab{display:inline-flex;position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;box-shadow:var(--shadow);padding:12px 18px;border-radius:99px}
+  .xrow{grid-template-columns:38px 10px minmax(0,1fr) auto;padding:10px 14px;gap:10px}
+  .bar-row{grid-template-columns:minmax(0,110px) minmax(0,1fr) auto}
+}
+.side-me{display:none}
+@media (max-width:820px){.side-me{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}}
+</style>
+
+<div class="app" id="app">
+  <aside class="side" id="side"></aside>
+  <main class="main"><div class="wrap" id="view"><p class="loading">Opening your ledger…</p></div></main>
+  <button class="btn primary fab" data-act="add-expense" id="fab" hidden>+ Add expense</button>
+</div>
+<dialog id="dlg"></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ---------- constants ---------- */
+const CATS = [
+  {k:'food',l:'Food & drink',c:'#D9822B',kw:['dinner','lunch','breakfast','restaurant','cafe','café','coffee','pizza','bar ','beer','food','sushi','burger','brunch','takeaway','glovo','straus']},
+  {k:'groceries',l:'Groceries',c:'#5E9E3F',kw:['grocer','supermarket','linella','kaufland','lidl','market','nr1','fourchette','carrefour','auchan','food shop']},
+  {k:'rent',l:'Rent',c:'#7A5CC4',kw:['rent','chirie','apartment','lease','mortgage']},
+  {k:'utilities',l:'Utilities',c:'#2F8FB0',kw:['electric','gas bill','water','internet','phone','utilit','heating','wifi','moldtelecom','orange','starnet']},
+  {k:'transport',l:'Transport',c:'#3C6FD1',kw:['taxi','uber','yandex','bolt','bus','train','fuel','petrol','benzin','parking','metro','car ']},
+  {k:'travel',l:'Travel & stay',c:'#C2447A',kw:['hotel','flight','airbnb','hostel','booking','trip','wizz','ryanair','visa']},
+  {k:'fun',l:'Entertainment',c:'#9C55B5',kw:['movie','cinema','concert','game','netflix','spotify','club','party','bowling','karaoke','tickets']},
+  {k:'shopping',l:'Shopping',c:'#A57A2C',kw:['clothes','amazon','shop','ikea','temu','shoes','emag']},
+  {k:'health',l:'Health',c:'#2E9E8F',kw:['pharmacy','farmacia','doctor','medicine','gym','dentist','clinic']},
+  {k:'gifts',l:'Gifts',c:'#D0544B',kw:['gift','birthday','present','flowers','cadou']},
+  {k:'household',l:'Household',c:'#6F8B3A',kw:['cleaning','detergent','furniture','repair','kitchen','toilet paper']},
+  {k:'other',l:'Other',c:'#7B8682',kw:[]},
+];
+const CAT = Object.fromEntries(CATS.map(c=>[c.k,c]));
+const CURS = ['MDL','EUR','USD','RON','GBP','UAH','PLN','CHF','TRY','CZK','HUF','BGN'];
+const KINDS = ['Trip','Home','Couple','Friends','Work','Other'];
+const METHODS = [['equal','Equally'],['exact','Exact amounts'],['percent','Percent'],['shares','Shares'],['adjust','Adjust']];
+const FREQ = {none:'Does not repeat',weekly:'Every week',monthly:'Every month',yearly:'Every year'};
+const LOCAL_KEY = 'evenly-local-v1';
+
+/* ---------- state ---------- */
+const S = {
+  people:{}, groups:{}, expenses:{}, recurring:{}, prefs:{},
+  loaded:{people:false,groups:false,expenses:false,recurring:false},
+  view:{name:'dashboard', id:null, tab:'expenses'},
+  filt:{q:'', gid:'*', cat:'*', pid:'*'}, ins:{period:'3m', gid:'*', cur:null, basis:'all'},
+  mode:'starting', uid:null, user:null, assets:null, downloads:null, canWrite:true,
+  profiles:{}, tabId:null, slow:false, calc:null,
+};
+let DB = null;
+
+/* ---------- helpers ---------- */
+const $ = (s,r=document)=>r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const pad = n => String(n).padStart(2,'0');
+const iso = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const todayISO = () => iso(new Date());
+const parseISO = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtCache = {};
+function fmt(c, cur){
+  try { const f = fmtCache[cur] ??= new Intl.NumberFormat(undefined,{style:'currency',currency:cur}); return f.format(c/100); }
+  catch { return (c/100).toFixed(2)+' '+cur; }
+}
+function fmtShort(c, cur){
+  try { return new Intl.NumberFormat(undefined,{style:'currency',currency:cur,notation:'compact',maximumFractionDigits:1}).format(c/100); }
+  catch { return Math.round(c/100)+' '+cur; }
+}
+function evalExpr(src){
+  const s = String(src).replace(/,/g,'.').replace(/\s/g,'');
+  if (!s || !/^[\d.+\-*/()]+$/.test(s)) return null;
+  let i = 0;
+  const num = () => {
+    if (s[i]==='(') { i++; const v = add(); if (s[i++]!==')') throw 0; return v; }
+    if (s[i]==='-') { i++; return -num(); }
+    const m = /^(\d+\.?\d*|\.\d+)/.exec(s.slice(i)); if (!m) throw 0; i += m[0].length; return parseFloat(m[0]);
+  };
+  const mul = () => { let v = num(); while (s[i]==='*'||s[i]==='/') { const o = s[i++]; const r = num(); v = o==='*' ? v*r : v/r; } return v; };
+  const add = () => { let v = mul(); while (s[i]==='+'||s[i]==='-') { const o = s[i++]; const r = mul(); v = o==='+' ? v+r : v-r; } return v; };
+  try { const v = add(); return (i===s.length && isFinite(v)) ? v : null; } catch { return null; }
+}
+const parseMoney = s => { const v = evalExpr(s); return v==null ? null : Math.round(v*100); };
+const centsStr = c => (c/100).toFixed(2);
+function allocate(total, weights){
+  const sum = weights.reduce((a,[,w])=>a+w,0); if (sum<=0) return null;
+  const out = {}, rems = []; let used = 0;
+  for (const [id,w] of weights) { const ex = total*w/sum; const f = Math.floor(ex); out[id] = f; used += f; rems.push([id, ex-f]); }
+  rems.sort((a,b)=>b[1]-a[1]);
+  for (let k=0, left=total-used; left>0; k++, left--) out[rems[k%rems.length][0]]++;
+  return out;
+}
+function guessCat(desc){
+  const d = ' '+desc.toLowerCase()+' ';
+  for (const c of CATS) if (c.kw.some(k=>d.includes(k))) return c.k;
+  return null;
+}
+function hueOf(id){ let h = 0; for (const ch of String(id)) h = (h*31 + ch.charCodeAt(0)) >>> 0; return h % 360; }
+function initials(n){ const p = String(n||'?').trim().split(/\s+/); return ((p[0]?.[0]||'?') + (p[1]?.[0]||'')).toUpperCase(); }
+function avatar(pid, sm){ const p = S.people[pid]; return `<span class="av${sm?' sm':''}" style="background:hsl(${hueOf(pid)} 42% 44%)" aria-hidden="true">${esc(initials(p?.name))}</span>`; }
+
+/* ---------- people & identity ---------- */
+const meId = () => S.prefs.meId && S.people[S.prefs.meId] ? S.prefs.meId : null;
+const peopleList = (all) => Object.entries(S.people).map(([id,p])=>({id,...p})).filter(p=>all||!p.deleted).sort((a,b)=>a.name.localeCompare(b.name));
+const groupList = () => Object.entries(S.groups).map(([id,g])=>({id,...g})).filter(g=>!g.deleted).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+function nm(pid, start){
+  if (pid && pid===meId()) return start ? 'You' : 'you';
+  const p = S.people[pid]; if (!p) return 'Someone';
+  return p.name + (p.deleted ? ' (removed)' : '');
+}
+const verbS = (pid, plain, third) => pid===meId() ? plain : third; // "you owe" / "Ana owes"
+function who(uid){ if (!uid) return S.mode==='local' ? 'You' : 'Someone'; if (uid===S.uid) return 'You'; return S.profiles[uid] || 'Someone'; }
+async function ensureProfiles(ids){
+  if (!S.user) return;
+  const need = [...new Set(ids)].filter(i=>i && i!==S.uid && !(i in S.profiles));
+  if (!need.length) return;
+  need.forEach(i=>S.profiles[i]='');
+  try { const ps = await S.user.profiles(need); let ch = false; for (const id of need) { const n = ps[id]?.name || ''; if (n) { S.profiles[id] = n; ch = true; } } if (ch) render(); } catch {}
+}
+
+/* ---------- ledger math ---------- */
+function activeExpenses(){
+  return Object.entries(S.expenses).map(([id,e])=>({id,...e}))
+    .filter(e=>!e.deleted && (!e.groupId || (S.groups[e.groupId] && !S.groups[e.groupId].deleted)))
+    .sort((a,b)=> b.date.localeCompare(a.date) || (b.createdAt||0)-(a.createdAt||0));
+}
+function netBal(list){
+  const B = {};
+  for (const e of list) {
+    const m = (B[e.currency] ??= {});
+    for (const [p,v] of Object.entries(e.paid||{})) m[p] = (m[p]||0) + v;
+    for (const [p,v] of Object.entries(e.owed||{})) m[p] = (m[p]||0) - v;
+  }
+  return B;
+}
+function simplifyBal(B){
+  const out = [];
+  for (const [cur,m] of Object.entries(B)) {
+    const cr = [], db = [];
+    for (const [p,v] of Object.entries(m)) { if (v>0) cr.push([p,v]); else if (v<0) db.push([p,-v]); }
+    while (cr.length && db.length) {
+      cr.sort((a,b)=>b[1]-a[1]); db.sort((a,b)=>b[1]-a[1]);
+      const x = Math.min(db[0][1], cr[0][1]);
+      out.push({cur, from:db[0][0], to:cr[0][0], amt:x});
+      db[0][1] -= x; cr[0][1] -= x;
+      if (!db[0][1]) db.shift(); if (!cr[0][1]) cr.shift();
+    }
+  }
+  return out;
+}
+function pairEdges(list){
+  const M = {};
+  for (const e of list) {
+    const m = (M[e.currency] ??= {});
+    const payers = Object.entries(e.paid||{}).filter(([,v])=>v>0); if (!payers.length) continue;
+    for (const [d,ow] of Object.entries(e.owed||{})) {
+      if (ow<=0) continue;
+      for (const [p,c] of Object.entries(allocate(ow, payers))) { if (p===d || !c) continue; m[d+'|'+p] = (m[d+'|'+p]||0) + c; }
+    }
+  }
+  const out = [];
+  for (const [cur,m] of Object.entries(M)) {
+    const seen = new Set();
+    for (const k of Object.keys(m)) {
+      const [a,b] = k.split('|'); const key = a<b ? a+'|'+b : b+'|'+a; if (seen.has(key)) continue; seen.add(key);
+      const v = (m[a+'|'+b]||0) - (m[b+'|'+a]||0);
+      if (v>0) out.push({cur,from:a,to:b,amt:v}); else if (v<0) out.push({cur,from:b,to:a,amt:-v});
+    }
+  }
+  return out;
+}
+function computeAll(){
+  const list = activeExpenses();
+  const byG = {};
+  for (const e of list) (byG[e.groupId||''] ??= []).push(e);
+  const edges = [];
+  for (const [gid,l] of Object.entries(byG)) {
+    const g = S.groups[gid];
+    const es = (gid && g && g.simplify!==false) ? simplifyBal(netBal(l)) : pairEdges(l);
+    for (const x of es) { x.gid = gid; edges.push(x); }
+  }
+  S.calc = {list, byG, edges};
+}
+function addTo(map, cur, v){ map[cur] = (map[cur]||0) + v; }
+function myTotals(filter){
+  const me = meId(); const owe = {}, owed = {}, net = {};
+  if (!me) return {owe, owed, net};
+  for (const e of S.calc.edges) {
+    if (filter && !filter(e)) continue;
+    if (e.from===me) { addTo(owe,e.cur,e.amt); addTo(net,e.cur,-e.amt); }
+    if (e.to===me) { addTo(owed,e.cur,e.amt); addTo(net,e.cur,e.amt); }
+  }
+  return {owe, owed, net};
+}
+function friendNet(pid){ // >0: friend owes me
+  const me = meId(); const net = {};
+  for (const e of S.calc.edges) {
+    if (e.from===pid && e.to===me) addTo(net,e.cur,e.amt);
+    if (e.from===me && e.to===pid) addTo(net,e.cur,-e.amt);
+  }
+  return net;
+}
+function memberNet(gid){ return netBal(S.calc.byG[gid]||[]); }
+function nonZero(map){ return Object.entries(map).filter(([,v])=>v); }
+function balText(map, friend){
+  const nz = nonZero(map);
+  if (!nz.length) return `<span class="mut">settled up</span>`;
+  return nz.map(([c,v])=>`<span class="${v>0?'pos':'neg'}">${v>0?(friend?'owes you ':'you are owed '):'you owe '}${fmt(Math.abs(v),c)}</span>`).join('<br>');
+}
+
+/* ---------- storage layer ---------- */
+let LOCAL = null;
+function saveLocal(){ try { localStorage.setItem(LOCAL_KEY, JSON.stringify(LOCAL)); } catch {} }
+const store = {
+  async set(c, id, data){
+    if (DB) return guard(()=>DB.collection(c).doc(id).set(data));
+    LOCAL[c][id] = data; S[c] = {...LOCAL[c]}; saveLocal(); render();
+  },
+  async update(c, id, patch){
+    if (DB) return guard(()=>DB.collection(c).doc(id).update(patch));
+    LOCAL[c][id] = {...LOCAL[c][id], ...patch}; S[c] = {...LOCAL[c]}; saveLocal(); render();
+  },
+  async del(c, id){
+    if (DB) return guard(()=>DB.collection(c).doc(id).delete());
+    delete LOCAL[c][id]; S[c] = {...LOCAL[c]}; saveLocal(); render();
+  },
+};
+async function guard(fn, retried){
+  try { return await fn(); }
+  catch (e) {
+    if (e?.code==='unavailable' && !retried) { await new Promise(r=>setTimeout(r, 400+Math.random()*600)); return guard(fn, true); }
+    if (e?.code==='invalid_argument') { S.canWrite = false; render(); throw new Error('You can view this ledger but not change it. Ask the owner for Contributor access.'); }
+    if (e?.code==='quota_exceeded') throw new Error('The ledger is full. Delete some old expenses and try again.');
+    throw new Error(e?.message || 'Could not save. Check your connection and try again.');
+  }
+}
+async function setPrefs(patch){
+  S.prefs = {...S.prefs, ...patch}; render();
+  if (DB && S.uid) { try { await DB.doc(`data/users/${S.uid}/prefs`).set(S.prefs); } catch {} }
+  else { try { localStorage.setItem(LOCAL_KEY+'-prefs', JSON.stringify(S.prefs)); } catch {} }
+}
+const stamp = () => ({updatedAt:Date.now(), updatedBy:S.uid||null});
+const created = () => ({createdAt:Date.now(), createdBy:S.uid||null, ...stamp()});
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 2600); }
+
+/* ---------- icons ---------- */
+const IC = {
+  dashboard:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',
+  activity:'<path d="M3 12h4l3 8 4-16 3 8h4"/>',
+  all:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  insights:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  group:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 4.5a3.2 3.2 0 0 1 0 6.3M18 14.3c1.8.8 3 2.7 3 5.7"/>',
+  nogroup:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12h8"/>',
+};
+const icon = k => `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
+
+/* ---------- render: sidebar ---------- */
+function renderSide(){
+  const v = S.view, me = meId();
+  const navItem = (name,label) => `<button class="item${v.name===name?' on':''}" data-act="nav" data-view="${name}">${icon(name)}<span class="lbl">${label}</span></button>`;
+  const groups = groupList();
+  const hasNoGroup = (S.calc.byG['']||[]).length > 0;
+  const gItems = groups.map(g=>{
+    const t = myTotals(e=>e.gid===g.id).net; const nz = nonZero(t);
+    const bal = me && nz.length ? `<span class="bal ${nz[0][1]>0?'pos':'neg'}">${nz[0][1]>0?'+':'−'}${fmtShort(Math.abs(nz[0][1]),nz[0][0])}${nz.length>1?' …':''}</span>` : '';
+    return `<button class="item${v.name==='group'&&v.id===g.id?' on':''}" data-act="nav" data-view="group" data-id="${g.id}">${icon('group')}<span class="lbl">${esc(g.name)}</span>${bal}</button>`;
+  }).join('') + (hasNoGroup ? `<button class="item${v.name==='group'&&v.id===''?' on':''}" data-act="nav" data-view="group" data-id="">${icon('nogroup')}<span class="lbl">Non-group expenses</span></button>` : '');
+  const friends = peopleList().filter(p=>p.id!==me);
+  const fItems = friends.map(p=>{
+    const nz = nonZero(friendNet(p.id));
+    const bal = me && nz.length ? `<span class="bal ${nz[0][1]>0?'pos':'neg'}">${nz[0][1]>0?'+':'−'}${fmtShort(Math.abs(nz[0][1]),nz[0][0])}${nz.length>1?' …':''}</span>` : '';
+    return `<button class="item${v.name==='friend'&&v.id===p.id?' on':''}" data-act="nav" data-view="friend" data-id="${p.id}">${avatar(p.id,true)}<span class="lbl">${esc(p.name)}</span>${bal}</button>`;
+  }).join('');
+  const people = peopleList();
+  $('#side').innerHTML = `<div class="side-in">
+    <div class="brand"><span class="mark"><svg width="16" height="12" viewBox="0 0 16 12" aria-hidden="true"><rect x="0" y="1" width="16" height="3" rx="1.5"/><rect x="0" y="8" width="16" height="3" rx="1.5"/></svg></span>Evenly</div>
+    <nav class="nav" aria-label="Views">${navItem('dashboard','Dashboard')}${navItem('activity','Recent activity')}${navItem('all','All expenses')}${navItem('insights','Insights')}</nav>
+    <div class="side-sec"><div class="side-h">Groups${S.canWrite?'<button class="mini" data-act="add-group">+ New</button>':''}</div>${gItems || '<div class="side-empty">No groups yet</div>'}</div>
+    <div class="side-sec"><div class="side-h">Friends${S.canWrite?'<button class="mini" data-act="add-person">+ Add</button>':''}</div>${fItems || '<div class="side-empty">No friends yet</div>'}</div>
+  </div>
+  <div class="side-foot">
+    <label for="me-sel">You are</label>
+    <select id="me-sel" data-change="me"><option value="">Choose your name…</option>${people.map(p=>`<option value="${p.id}"${p.id===me?' selected':''}>${esc(p.name)}</option>`).join('')}</select>
+    <div class="mode">${S.mode==='db' ? 'Shared with everyone you give access to this page.' : S.mode==='local' ? 'Saved in this browser only.' : 'Connecting…'}</div>
+  </div>`;
+}
+
+/* ---------- render: main ---------- */
+function render(){
+  computeAll();
+  renderSide();
+  const v = S.view;
+  let html = '';
+  if (v.name==='group' && v.id && !S.groups[v.id]) S.view = {name:'dashboard'};
+  if (v.name==='friend' && !S.people[v.id]) S.view = {name:'dashboard'};
+  switch (S.view.name) {
+    case 'activity': html = viewActivity(); break;
+    case 'all': html = viewAll(); break;
+    case 'insights': html = viewInsights(); break;
+    case 'group': html = viewGroup(); break;
+    case 'friend': html = viewFriend(); break;
+    default: html = viewDashboard();
+  }
+  const banner = !S.canWrite ? `<div class="note warn"><p>You can view this ledger but not change it. Ask the owner to share it with you as a Contributor.</p></div>`
+    : S.slow && !allLoaded() ? `<div class="note warn"><p>Still reaching the shared ledger. What you see may be out of date.</p></div>` : '';
+  const view = $('#view');
+  const ae = document.activeElement; const focusId = ae && view.contains(ae) ? ae.id : null; const sel = focusId && ae.selectionStart;
+  view.innerHTML = banner + html;
+  if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (sel!=null) el.setSelectionRange(sel, sel); } catch {} } }
+  $('#fab').hidden = !S.canWrite || !peopleList().length;
+}
+const allLoaded = () => Object.values(S.loaded).every(Boolean);
+
+function header(eyebrow, title, actions){
+  return `<header class="vh"><div style="min-width:0">${eyebrow?`<div class="eyebrow">${eyebrow}</div>`:''}<h1>${title}</h1></div><div class="vh-act">${actions||''}</div></header>`;
+}
+function stdActions(extra){
+  if (!S.canWrite || !peopleList().length) return extra||'';
+  return `<button class="btn primary" data-act="add-expense">+ Add expense</button><button class="btn" data-act="settle">Settle up</button>${extra||''}`;
+}
+
+/* dashboard */
+function viewDashboard(){
+  const people = peopleList(); const me = meId();
+  if (!allLoaded() && S.mode==='db' && !people.length) return header('', 'Dashboard') + `<p class="loading">Loading the ledger…</p>`;
+  if (!people.length) return header('', 'Welcome to Evenly') + `<section class="card hello">
+    <div class="l"><h2>Split costs with friends and see who owes whom.</h2>
+      <p>Start by adding your own name. Then create a group for a trip, a flat or a night out, add the people in it, and log what each person paid.</p>
+      ${S.canWrite ? `<form class="inline" id="hello-form"><input id="hello-name" placeholder="Your name" maxlength="40" autocomplete="name" aria-label="Your name"><button class="btn primary" type="submit">Start</button></form>
+      <p style="font-size:13px">Just looking? <button class="link" data-act="example">Load an example trip</button>, then delete it when you are done.</p>` : '<p>Nothing has been added yet.</p>'}
+    </div>
+    <div class="r"><b>What you can do</b><ul>
+      <li>Split equally, by exact amounts, percentages, shares or with adjustments</li>
+      <li>Several people can pay for one expense</li>
+      <li>Simplify debts so the group makes the fewest payments</li>
+      <li>Repeat monthly bills such as rent and internet automatically</li>
+      <li>Keep balances in more than one currency, with MDL, EUR, USD and more</li>
+      <li>Attach receipt photos and comment on expenses</li>
+      <li>Charts by category and month, a monthly budget, and CSV export</li>
+    </ul></div></section>`;
+  let html = header('Dashboard', me ? `Hi, ${esc(S.people[me].name)}` : 'Dashboard', stdActions());
+  if (!me) html += `<div class="note info"><p>Choose which person is you. Balances on this page are shown from that person's side.</p>
+    <select id="me-sel2" data-change="me" aria-label="Which person are you"><option value="">Choose your name…</option>${people.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>`;
+  if (Object.values(S.people).some(p=>p.example) || Object.values(S.groups).some(g=>g.example && !g.deleted))
+    html += `<div class="note info"><p>The example trip is loaded. Its people and expenses are made up.</p>${S.canWrite?'<button class="btn sm" data-act="clear-example">Remove example data</button>':''}</div>`;
+  const t = myTotals();
+  const lines = (map, sign) => { const nz = nonZero(map); return nz.length ? nz.map(([c,v])=>`<small class="${sign==='net'?(v>0?'pos':'neg'):sign}">${sign==='net'&&v>0?'+':sign==='net'?'−':''}${fmt(Math.abs(v),c)}</small>`).join('') : `<small class="mut">${fmt(0, S.prefs.currency||'MDL')}</small>`; };
+  html += `<section class="strip" aria-label="Your balances">
+    <div><span class="k">Total balance</span><span class="v">${lines(t.net,'net')}</span></div>
+    <div><span class="k">You owe</span><span class="v">${lines(t.owe,'neg')}</span></div>
+    <div><span class="k">You are owed</span><span class="v">${lines(t.owed,'pos')}</span></div></section>`;
+  // friend rows
+  const owe = [], owed = [];
+  if (me) for (const p of people) { if (p.id===me) continue; const nz = nonZero(friendNet(p.id)); for (const [c,v] of nz) (v>0?owed:owe).push({p, c, v:Math.abs(v)}); }
+  const fr = (r, dir) => `<div class="prow">${avatar(r.p.id)}<div class="who"><b>${esc(r.p.name)}</b><span>${dir==='owe'?'you owe':'owes you'}</span></div><div class="amt ${dir==='owe'?'neg':'pos'}">${fmt(r.v,r.c)}</div>
+    ${S.canWrite?`<button class="btn sm" data-act="settle" data-from="${dir==='owe'?me:r.p.id}" data-to="${dir==='owe'?r.p.id:me}" data-amt="${r.v}" data-cur="${r.c}">Settle</button>`:''}</div>`;
+  html += `<div class="grid2">
+    <section class="card"><div class="card-h"><h2>You owe</h2></div><div class="rows">${owe.sort((a,b)=>b.v-a.v).map(r=>fr(r,'owe')).join('') || `<div class="empty"><p>${me?'You do not owe anyone.':'Choose who you are to see this.'}</p></div>`}</div></section>
+    <section class="card"><div class="card-h"><h2>You are owed</h2></div><div class="rows">${owed.sort((a,b)=>b.v-a.v).map(r=>fr(r,'owed')).join('') || `<div class="empty"><p>${me?'Nobody owes you right now.':'Choose who you are to see this.'}</p></div>`}</div></section></div>`;
+  // groups overview
+  const gs = groupList();
+  html += `<section class="card"><div class="card-h"><h2>Groups</h2>${S.canWrite?'<button class="btn sm" data-act="add-group">+ New group</button>':''}</div><div class="rows">${
+    gs.map(g=>{ const n = (S.calc.byG[g.id]||[]).filter(e=>e.type!=='payment').length; return `<button class="prow item" style="border-radius:0" data-act="nav" data-view="group" data-id="${g.id}"><span class="avs">${g.memberIds.slice(0,4).map(id=>avatar(id,true)).join('')}</span><span class="who"><b>${esc(g.name)}</b><span>${esc(g.kind||'Group')} · ${g.memberIds.length} people · ${n} expense${n===1?'':'s'}</span></span><span class="amt">${me?balText(myTotals(e=>e.gid===g.id).net):''}</span></button>`; }).join('')
+    || `<div class="empty"><h3>No groups yet</h3><p>A group keeps one trip, flat or event together, with its own balances.</p>${S.canWrite?'<button class="btn primary" data-act="add-group">Create a group</button>':''}</div>`}</div></section>`;
+  const recent = S.calc.list.slice(0,6);
+  html += `<section class="card"><div class="card-h"><h2>Latest expenses</h2><button class="btn sm ghost" data-act="nav" data-view="all">See all</button></div>${recent.length ? `<div class="rows">${recent.map(e=>expRow(e,true)).join('')}</div>` : `<div class="empty"><p>No expenses yet. Add the first one with “Add expense”.</p></div>`}</section>`;
+  return html;
+}
+
+/* expense row */
+function expRow(e, showGroup){
+  const me = meId(); const d = parseISO(e.date);
+  const cat = CAT[e.category] || CAT.other;
+  const gname = showGroup ? (e.groupId ? S.groups[e.groupId]?.name : 'Non-group') : '';
+  const gtag = gname ? ` · ${esc(gname)}` : '';
+  if (e.type==='payment') {
+    const [from] = Object.keys(e.paid); const [to] = Object.keys(e.owed);
+    const mine = from===me ? `<span class="mut">you paid</span>` : to===me ? `<span class="mut">you received</span>` : '';
+    return `<button class="xrow pay" data-act="open-expense" data-id="${e.id}"><span class="dt"><small>${MONTHS[d.getMonth()]}</small><b>${d.getDate()}</b></span><span class="sw" style="background:var(--pos)"></span>
+      <span class="t"><b>${esc(nm(from,true))} paid ${esc(nm(to))}</b><span>Payment${gtag}${e.notes?` · ${esc(e.notes)}`:''}</span></span><span class="r"><b>${fmt(e.amount,e.currency)}</b>${mine}</span></button>`;
+  }
+  const payers = Object.keys(e.paid||{});
+  const paidTxt = payers.length===1 ? `${esc(nm(payers[0],true))} paid ${fmt(e.amount,e.currency)}` : `${payers.length} people paid ${fmt(e.amount,e.currency)}`;
+  let right = `<span class="mut">not involved</span>`;
+  if (me && ((e.paid||{})[me] || (e.owed||{})[me])) {
+    const net = ((e.paid||{})[me]||0) - ((e.owed||{})[me]||0);
+    right = net>0 ? `<span class="pos">you lent</span><b class="pos">${fmt(net,e.currency)}</b>` : net<0 ? `<span class="neg">you borrowed</span><b class="neg">${fmt(-net,e.currency)}</b>` : `<span class="mut">your share</span><b>${fmt((e.owed||{})[me]||0,e.currency)}</b>`;
+  }
+  return `<button class="xrow" data-act="open-expense" data-id="${e.id}"><span class="dt"><small>${MONTHS[d.getMonth()]}</small><b>${d.getDate()}</b></span><span class="sw" style="background:${cat.c}" title="${esc(cat.l)}"></span>
+    <span class="t"><b>${esc(e.desc)}${e.recurringId?'<span class="tag rec">repeats</span>':''}${e.receiptId?'<span class="tag">receipt</span>':''}${(e.comments||[]).length?`<span class="tag">${e.comments.length} comment${e.comments.length>1?'s':''}</span>`:''}</b><span>${paidTxt}${gtag}</span></span><span class="r">${right}</span></button>`;
+}
+function monthList(list, showGroup){
+  if (!list.length) return '';
+  let html = '', cur = '';
+  for (const e of list) { const k = e.date.slice(0,7); if (k!==cur) { cur = k; const d = parseISO(k+'-01'); html += `<div class="month">${d.toLocaleString(undefined,{month:'long',year:'numeric'})}</div>`; } html += expRow(e, showGroup); }
+  return html;
+}
+function filterList(list, f){
+  const q = (f.q||'').trim().toLowerCase();
+  return list.filter(e => (f.gid==='*' || (e.groupId||'')===f.gid) && (f.cat==='*' || (f.cat==='payment' ? e.type==='payment' : e.category===f.cat && e.type!=='payment'))
+    && (f.pid==='*' || (e.paid||{})[f.pid]!=null || (e.owed||{})[f.pid]!=null)
+    && (!q || (e.desc||'').toLowerCase().includes(q) || (e.notes||'').toLowerCase().includes(q) || String(e.amount/100).includes(q)));
+}
+
+/* all expenses */
+function viewAll(){
+  const f = S.filt;
+  const list = filterList(S.calc.list, f);
+  const people = peopleList(true);
+  let html = header('Ledger', 'All expenses', stdActions(`<button class="btn" data-act="export">Export CSV</button>`));
+  html += `<div class="toolbar"><input type="search" id="flt-q" data-input="q" placeholder="Search description, notes or amount" value="${esc(f.q)}" aria-label="Search">
+    <select id="flt-g" data-change="fgid" aria-label="Group"><option value="*">All groups</option>${groupList().map(g=>`<option value="${g.id}"${f.gid===g.id?' selected':''}>${esc(g.name)}</option>`).join('')}<option value=""${f.gid===''?' selected':''}>Non-group</option></select>
+    <select id="flt-c" data-change="fcat" aria-label="Category"><option value="*">All categories</option>${CATS.map(c=>`<option value="${c.k}"${f.cat===c.k?' selected':''}>${c.l}</option>`).join('')}<option value="payment"${f.cat==='payment'?' selected':''}>Payments</option></select>
+    <select id="flt-p" data-change="fpid" aria-label="Person"><option value="*">Anyone</option>${people.map(p=>`<option value="${p.id}"${f.pid===p.id?' selected':''}>${esc(p.name)}</option>`).join('')}</select></div>`;
+  const totals = {}; list.filter(e=>e.type!=='payment').forEach(e=>addTo(totals,e.currency,e.amount));
+  html += `<p class="mut" style="margin:0">${list.length} item${list.length===1?'':'s'}${nonZero(totals).length?' · spent '+nonZero(totals).map(([c,v])=>fmt(v,c)).join(' + '):''}</p>`;
+  html += `<section class="card">${list.length ? monthList(list, true) : `<div class="empty"><p>No expenses match these filters.</p></div>`}</section>`;
+  return html;
+}
+
+/* activity */
+function viewActivity(){
+  const items = [];
+  for (const [id,e] of Object.entries(S.expenses)) {
+    const g = e.groupId ? S.groups[e.groupId] : null; if (g?.deleted) continue;
+    items.push({t:e.createdAt||0, id, e, verb: e.auto ? 'repeated' : 'added', by:e.createdBy});
+    if (e.updatedAt && e.updatedAt - (e.createdAt||0) > 2000 && !e.deleted) items.push({t:e.updatedAt, id, e, verb:'updated', by:e.updatedBy});
+    if (e.deleted) items.push({t:e.deletedAt||e.updatedAt||0, id, e, verb:'deleted', by:e.deletedBy});
+  }
+  for (const [id,g] of Object.entries(S.groups)) items.push({t:g.createdAt||0, gid:id, g, verb: g.deleted?'deleted group':'created group', by: g.deleted ? g.updatedBy : g.createdBy});
+  items.sort((a,b)=>b.t-a.t);
+  const shown = items.slice(0,80);
+  ensureProfiles(shown.map(i=>i.by));
+  let html = header('Activity', 'Recent activity', stdActions());
+  const rows = shown.map(it=>{
+    const when = it.t ? new Date(it.t).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}) : '';
+    if (it.g) return `<div class="prow">${icon('group')}<div class="who"><b>${esc(who(it.by))} ${it.verb} “${esc(it.g.name)}”</b><span>${when}</span></div></div>`;
+    const e = it.e; const gname = e.groupId ? S.groups[e.groupId]?.name : 'Non-group';
+    const label = e.type==='payment' ? `a payment from ${esc(nm(Object.keys(e.paid)[0]))} to ${esc(nm(Object.keys(e.owed)[0]))}` : `“${esc(e.desc)}”`;
+    const act = it.verb==='deleted' ? (S.canWrite && e.deleted ? `<button class="btn sm" data-act="restore-expense" data-id="${it.id}">Restore</button>` : '') : (!e.deleted ? `<button class="btn sm ghost" data-act="open-expense" data-id="${it.id}">View</button>` : '');
+    return `<div class="prow"><span class="sw" style="background:${e.type==='payment'?'var(--pos)':(CAT[e.category]||CAT.other).c};flex:none"></span><div class="who"><b style="white-space:normal">${esc(who(it.by))} ${it.verb} ${label}</b><span>${esc(gname||'')} · ${fmt(e.amount,e.currency)} · ${when}</span></div>${act}</div>`;
+  }).join('');
+  html += `<section class="card"><div class="rows">${rows || '<div class="empty"><p>Nothing has happened yet.</p></div>'}</div></section>`;
+  return html;
+}
+
+/* group */
+function viewGroup(){
+  const gid = S.view.id; const g = gid ? S.groups[gid] : {name:'Non-group expenses', memberIds: peopleList().map(p=>p.id), currency:S.prefs.currency||'MDL', kind:'Between friends'};
+  const tab = S.view.tab || 'expenses'; const me = meId();
+  const list = S.calc.byG[gid] || [];
+  let html = header(esc(g.kind||'Group'), esc(g.name), stdActions());
+  const members = g.memberIds.filter(id=>S.people[id]);
+  html += `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="avs">${members.slice(0,8).map(id=>avatar(id,true)).join('')}</span><span class="mut" style="font-size:14px">${members.map(id=>esc(nm(id,false))).join(', ')}</span>${me?`<span style="margin-left:auto;text-align:right;font-weight:600">${balText(myTotals(e=>e.gid===gid).net)}</span>`:''}</div>`;
+  const tabs = [['expenses','Expenses'],['balances','Balances'],['totals','Totals']].concat(gid?[['settings','Settings']]:[]);
+  html += `<div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" data-act="tab" data-tab="${k}">${l}</button>`).join('')}</div>`;
+  if (tab==='expenses') {
+    const q = S.view.q || '';
+    const fl = filterList(list, {q, gid:'*', cat:'*', pid:'*'});
+    html += `<div class="toolbar"><input type="search" id="g-q" data-input="gq" placeholder="Search this group" value="${esc(q)}" aria-label="Search this group"></div>`;
+    html += `<section class="card">${fl.length ? monthList(fl, false) : `<div class="empty"><h3>${list.length?'No matches':'No expenses yet'}</h3><p>${list.length?'Try a different search.':'Add what someone paid, and Evenly works out who owes whom.'}</p>${!list.length&&S.canWrite?'<button class="btn primary" data-act="add-expense">Add the first expense</button>':''}</div>`}</section>`;
+  }
+  if (tab==='balances') {
+    const B = memberNet(gid); const curs = Object.keys(B);
+    const edges = S.calc.edges.filter(e=>e.gid===gid);
+    html += `<div class="grid2"><section class="card"><div class="card-h"><h2>Who is up, who is down</h2></div><div class="rows">${
+      members.map(id=>{ const vals = curs.map(c=>[c,B[c][id]||0]).filter(([,v])=>v);
+        return `<div class="prow">${avatar(id)}<div class="who"><b>${esc(nm(id,true))}</b><span>${vals.length?(vals.some(([,v])=>v>0)?'gets back':'owes'):'settled up'}</span></div><div class="amt">${vals.map(([c,v])=>`<div class="${v>0?'pos':'neg'}">${v>0?'+':'−'}${fmt(Math.abs(v),c)}</div>`).join('') || '<span class="mut">—</span>'}</div></div>`; }).join('')}</div></section>
+      <section class="card"><div class="card-h"><h2>Suggested payments</h2><span class="pill ${gid&&g.simplify!==false?'pos':'z'}">${gid&&g.simplify!==false?'Simplified':'Not simplified'}</span></div><div class="rows">${
+      edges.map(x=>`<div class="prow"><div class="who"><b style="white-space:normal">${esc(nm(x.from,true))} ${verbS(x.from,'pay','pays')} ${esc(nm(x.to))}</b></div><div class="amt">${fmt(x.amt,x.cur)}</div>${S.canWrite?`<button class="btn sm" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}" data-cur="${x.cur}" data-gid="${gid}">Record</button>`:''}</div>`).join('')
+      || '<div class="empty"><p>Everyone is settled up.</p></div>'}</div>
+      ${gid?`<div class="card-b mut" style="font-size:13px;border-top:1px solid var(--line)">${g.simplify!==false?'Debts are combined so the group makes as few payments as possible. You can turn this off in Settings.':'Each person pays back the people who paid for them. Turn on simplified debts in Settings to reduce the number of payments.'}</div>`:''}</section></div>`;
+  }
+  if (tab==='totals') html += totalsBlock(list.filter(e=>e.type!=='payment'), members);
+  if (tab==='settings' && gid) {
+    const recs = Object.entries(S.recurring).filter(([,r])=>r.groupId===gid && r.active);
+    html += `<div class="grid2"><section class="card"><div class="card-h"><h2>Group details</h2>${S.canWrite?'<button class="btn sm" data-act="edit-group">Edit</button>':''}</div><div class="card-b"><dl class="kv">
+      <dt>Name</dt><dd>${esc(g.name)}</dd><dt>Type</dt><dd>${esc(g.kind||'Other')}</dd><dt>Currency</dt><dd>${esc(g.currency)}</dd>
+      <dt>Simplify debts</dt><dd>${g.simplify!==false?'On':'Off'}</dd><dt>Members</dt><dd>${members.map(id=>esc(nm(id,true))).join(', ')}</dd></dl></div></section>
+      <section class="card"><div class="card-h"><h2>Repeating expenses</h2></div><div class="rows">${recs.map(([rid,r])=>`<div class="prow"><div class="who"><b>${esc(r.template.desc)}</b><span>${FREQ[r.freq]} · next on ${parseISO(r.nextDate).toLocaleDateString(undefined,{dateStyle:'medium'})}</span></div><div class="amt">${fmt(r.template.amount,r.template.currency)}</div>${S.canWrite?`<button class="btn sm" data-act="stop-recur" data-id="${rid}">Stop</button>`:''}</div>`).join('') || '<div class="empty"><p>None. When you add an expense, open “Notes, receipt, repeat” and pick how often it repeats.</p></div>'}</div></section></div>
+      <section class="card"><div class="card-h"><h2>Export and delete</h2></div><div class="card-b" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" data-act="export" data-gid="${gid}">Export this group as CSV</button>${S.canWrite?'<button class="btn danger" data-act="del-group">Delete group</button>':''}</div></section>`;
+  }
+  return html;
+}
+function totalsBlock(list, members){
+  const me = meId(); const tot = {}, mine = {}, paidMe = {};
+  for (const e of list) { addTo(tot,e.currency,e.amount); if (me) { addTo(mine,e.currency,(e.owed||{})[me]||0); addTo(paidMe,e.currency,(e.paid||{})[me]||0); } }
+  const curs = Object.keys(tot);
+  if (!curs.length) return `<section class="card"><div class="empty"><p>No spending recorded yet.</p></div></section>`;
+  const cur = curs.sort((a,b)=>tot[b]-tot[a])[0];
+  const l = list.filter(e=>e.currency===cur);
+  const byCat = {}; l.forEach(e=>addTo(byCat,e.category||'other',e.amount));
+  const byPerson = {}; l.forEach(e=>{ for (const [p,v] of Object.entries(e.owed||{})) addTo(byPerson,p,v); });
+  const fmtL = m => nonZero(m).map(([c,v])=>fmt(v,c)).join(' + ') || fmt(0,cur);
+  return `<section class="strip"><div><span class="k">Group spending</span><span class="v">${fmtL(tot)}</span></div><div><span class="k">Your share</span><span class="v">${me?fmtL(mine):'—'}</span></div><div><span class="k">You paid</span><span class="v">${me?fmtL(paidMe):'—'}</span></div></section>
+    <div class="grid2"><section class="card"><div class="card-h"><h2>By category</h2><span class="mut" style="font-size:13px">${cur}</span></div><div class="card-b">${catBars(byCat, cur)}</div></section>
+    <section class="card"><div class="card-h"><h2>Share per person</h2><span class="mut" style="font-size:13px">${cur}</span></div><div class="card-b"><div class="bars">${
+      Object.entries(byPerson).sort((a,b)=>b[1]-a[1]).map(([p,v])=>{ const max = Math.max(...Object.values(byPerson)); return `<div class="bar-row"><span class="lab">${avatar(p,true)}<span>${esc(nm(p,true))}</span></span><div class="track"><div class="fill" style="width:${(v/max*100).toFixed(1)}%;background:hsl(${hueOf(p)} 42% 50%)"></div></div><span class="num">${fmt(v,cur)}</span></div>`; }).join('')}</div></div></section></div>`;
+}
+function catBars(byCat, cur){
+  const tot = Object.values(byCat).reduce((a,b)=>a+b,0);
+  const rows = Object.entries(byCat).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  if (!rows.length) return '<p class="mut" style="margin:0">Nothing in this period.</p>';
+  const max = rows[0][1];
+  return `<div class="bars">${rows.map(([k,v])=>{ const c = CAT[k]||CAT.other; return `<div class="bar-row"><span class="lab"><span class="sw" style="background:${c.c};flex:none"></span><span>${c.l}</span></span><div class="track"><div class="fill" style="width:${(v/max*100).toFixed(1)}%;background:${c.c}"></div></div><span class="num">${fmt(v,cur)} <span class="mut">${Math.round(v/tot*100)}%</span></span></div>`; }).join('')}</div>`;
+}
+
+/* friend */
+function viewFriend(){
+  const pid = S.view.id; const p = S.people[pid]; const me = meId();
+  const net = me ? friendNet(pid) : {};
+  let html = header('Friend', esc(p.name), stdActions(S.canWrite?`<button class="btn" data-act="edit-person" data-id="${pid}">Edit</button>`:''));
+  if (!me) html += `<div class="note info"><p>Choose who you are in the sidebar to see what you and ${esc(p.name)} owe each other.</p></div>`;
+  else {
+    const nz = nonZero(net);
+    const byGroup = {};
+    for (const e of S.calc.edges) { const k = e.gid; if ((e.from===pid&&e.to===me)) addTo(byGroup[k] ??= {}, e.cur, e.amt); if (e.from===me&&e.to===pid) addTo(byGroup[k] ??= {}, e.cur, -e.amt); }
+    html += `<section class="card"><div class="card-h"><h2>${nz.length ? nz.map(([c,v])=>v>0?`<span class="pos">${esc(p.name)} owes you ${fmt(v,c)}</span>`:`<span class="neg">You owe ${esc(p.name)} ${fmt(-v,c)}</span>`).join('<br>') : 'You are settled up'}</h2>
+      ${nz.length&&S.canWrite?`<button class="btn primary" data-act="settle" data-from="${nz[0][1]>0?pid:me}" data-to="${nz[0][1]>0?me:pid}" data-amt="${Math.abs(nz[0][1])}" data-cur="${nz[0][0]}">Settle up</button>`:''}</div>
+      <div class="rows">${Object.entries(byGroup).filter(([,m])=>nonZero(m).length).map(([gid,m])=>`<div class="prow">${icon(gid?'group':'nogroup')}<div class="who"><b>${esc(gid?S.groups[gid]?.name:'Non-group expenses')}</b></div><div class="amt">${balText(m, true)}</div></div>`).join('')}</div></section>`;
+  }
+  const shared = S.calc.list.filter(e=>{ const inv = id => (e.paid||{})[id]!=null || (e.owed||{})[id]!=null; return inv(pid) && (!me || inv(me)); });
+  html += `<section class="card">${shared.length ? monthList(shared, true) : `<div class="empty"><p>No shared expenses with ${esc(p.name)} yet.</p></div>`}</section>`;
+  if (S.canWrite) html += `<div><button class="btn danger sm" data-act="del-person" data-id="${pid}">Remove ${esc(p.name)}</button></div>`;
+  return html;
+}
+
+/* insights */
+function periodStart(k){
+  const d = new Date(); d.setHours(0,0,0,0);
+  if (k==='1m') return iso(new Date(d.getFullYear(), d.getMonth(), 1));
+  if (k==='lm') return iso(new Date(d.getFullYear(), d.getMonth()-1, 1));
+  if (k==='3m') return iso(new Date(d.getFullYear(), d.getMonth()-2, 1));
+  if (k==='12m') return iso(new Date(d.getFullYear(), d.getMonth()-11, 1));
+  if (k==='y') return iso(new Date(d.getFullYear(), 0, 1));
+  return '0000-00-00';
+}
+function periodEnd(k){ const d = new Date(); return k==='lm' ? iso(new Date(d.getFullYear(), d.getMonth(), 0)) : '9999-12-31'; }
+function niceMax(v){ const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1,2,2.5,5,10]) if (m*p >= v) return m*p; return 10*p; }
+function viewInsights(){
+  const f = S.ins; const me = meId();
+  const all = S.calc.list.filter(e=>e.type!=='payment' && (f.gid==='*' || (e.groupId||'')===f.gid));
+  const curCount = {}; all.forEach(e=>addTo(curCount,e.currency,1));
+  const curs = Object.keys(curCount).sort((a,b)=>curCount[b]-curCount[a]);
+  if (!f.cur || !curCount[f.cur]) f.cur = curs[0] || S.prefs.currency || 'MDL';
+  const cur = f.cur;
+  const basisMine = f.basis==='mine' && me;
+  const val = e => basisMine ? ((e.owed||{})[me]||0) : e.amount;
+  const st = periodStart(f.period), en = periodEnd(f.period);
+  const list = all.filter(e=>e.currency===cur && e.date>=st && e.date<=en);
+  const total = list.reduce((a,e)=>a+e.amount,0);
+  const mine = me ? list.reduce((a,e)=>a+((e.owed||{})[me]||0),0) : 0;
+  const paid = me ? list.reduce((a,e)=>a+((e.paid||{})[me]||0),0) : 0;
+  const byCat = {}; list.forEach(e=>addTo(byCat,e.category||'other',val(e)));
+  // months
+  const now = new Date(); const months = [];
+  for (let i=11; i>=0; i--) { const d = new Date(now.getFullYear(), now.getMonth()-i, 1); months.push({k:iso(d).slice(0,7), label:MONTHS[d.getMonth()], total:0, mine:0}); }
+  const mi = Object.fromEntries(months.map((m,i)=>[m.k,i]));
+  all.filter(e=>e.currency===cur).forEach(e=>{ const i = mi[e.date.slice(0,7)]; if (i!=null) { months[i].total += e.amount; months[i].mine += me ? ((e.owed||{})[me]||0) : 0; } });
+  // payers
+  const payers = {}; list.forEach(e=>{ for (const [p,v] of Object.entries(e.paid||{})) addTo(payers,p,v); });
+  // budget
+  const bCur = S.prefs.budgetCur || cur; const budget = S.prefs.budget || 0;
+  const mStart = periodStart('1m');
+  const spentMonth = me ? S.calc.list.filter(e=>e.type!=='payment' && e.currency===bCur && e.date>=mStart).reduce((a,e)=>a+((e.owed||{})[me]||0),0) : 0;
+  const daysIn = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const pace = Math.round(spentMonth / now.getDate() * daysIn);
+
+  let html = header('Insights', 'Where the money goes', `<button class="btn" data-act="export">Export CSV</button>`);
+  html += `<div class="toolbar">
+    <select id="ins-p" data-change="ins-period" aria-label="Period">${[['1m','This month'],['lm','Last month'],['3m','Last 3 months'],['12m','Last 12 months'],['y','This year'],['all','All time']].map(([k,l])=>`<option value="${k}"${f.period===k?' selected':''}>${l}</option>`).join('')}</select>
+    <select id="ins-g" data-change="ins-gid" aria-label="Group"><option value="*">All groups</option>${groupList().map(g=>`<option value="${g.id}"${f.gid===g.id?' selected':''}>${esc(g.name)}</option>`).join('')}<option value=""${f.gid===''?' selected':''}>Non-group</option></select>
+    <select id="ins-c" data-change="ins-cur" aria-label="Currency">${(curs.length?curs:[cur]).map(c=>`<option${c===cur?' selected':''}>${c}</option>`).join('')}</select>
+    <div class="seg" role="group" aria-label="Count">${[['all','Whole cost'],['mine','My share']].map(([k,l])=>`<button type="button" class="${(f.basis===k)?'on':''}" data-act="ins-basis" data-k="${k}"${k==='mine'&&!me?' disabled title="Choose who you are first"':''}>${l}</button>`).join('')}</div></div>`;
+  html += `<section class="strip"><div><span class="k">Total spending</span><span class="v">${fmt(total,cur)}<small class="mut">${list.length} expense${list.length===1?'':'s'}</small></span></div>
+    <div><span class="k">Your share</span><span class="v">${me?fmt(mine,cur):'—'}${me&&total?`<small class="mut">${Math.round(mine/total*100)}% of the total</small>`:''}</span></div>
+    <div><span class="k">You paid</span><span class="v">${me?fmt(paid,cur):'—'}${me?`<small class="${paid-mine>=0?'pos':'neg'}">${paid-mine>=0?'covered others':'others covered you'} by ${fmt(Math.abs(paid-mine),cur)}</small>`:''}</span></div></section>`;
+  const mx = niceMax(Math.max(1, ...months.map(m=>basisMine?m.mine:m.total)));
+  const W = 640, H = 220, pl = 52, pr = 6, pt = 10, pb = 26, ih = H-pt-pb, bw = (W-pl-pr)/12;
+  const y = v => pt + ih - v/mx*ih;
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Spending per month, last 12 months, ${cur}">`;
+  for (const t of [0, .5, 1]) svg += `<line class="g" x1="${pl}" x2="${W-pr}" y1="${y(mx*t)}" y2="${y(mx*t)}"/><text class="tx" x="${pl-8}" y="${y(mx*t)+4}" text-anchor="end">${esc(fmtShort(mx*t,cur))}</text>`;
+  months.forEach((m,i)=>{ const x = pl + i*bw + bw*.18, w = bw*.64;
+    if (!basisMine) svg += `<rect class="b1" x="${x}" y="${y(m.total)}" width="${w}" height="${Math.max(0,ih-(y(m.total)-pt))}" rx="3"><title>${m.label}: ${esc(fmt(m.total,cur))} total</title></rect>`;
+    if (me) svg += `<rect class="b2" x="${x+(basisMine?0:w*.22)}" y="${y(m.mine)}" width="${basisMine?w:w*.56}" height="${Math.max(0,ih-(y(m.mine)-pt))}" rx="3"><title>${m.label}: ${esc(fmt(m.mine,cur))} your share</title></rect>`;
+    svg += `<text class="tx" x="${x+w/2}" y="${H-8}" text-anchor="middle">${m.label}</text>`; });
+  svg += `</svg>`;
+  html += `<div class="grid2"><section class="card"><div class="card-h"><h2>Last 12 months</h2><div class="legend">${!basisMine?'<span><i style="background:var(--bar)"></i>Whole cost</span>':''}${me?'<span><i style="background:var(--accent)"></i>Your share</span>':''}</div></div><div class="card-b">${svg}</div></section>
+    <section class="card"><div class="card-h"><h2>By category</h2><span class="mut" style="font-size:13px">${basisMine?'your share':'whole cost'}</span></div><div class="card-b">${catBars(byCat,cur)}</div></section></div>`;
+  html += `<div class="grid2"><section class="card"><div class="card-h"><h2>Monthly budget</h2><span class="mut" style="font-size:13px">your share, this month</span></div><div class="card-b" style="display:flex;flex-direction:column;gap:12px">${
+    !me ? '<p class="mut" style="margin:0">Choose who you are in the sidebar to track a budget.</p>' :
+    (budget ? `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b class="num">${fmt(spentMonth,bCur)} of ${fmt(budget,bCur)}</b><span class="${spentMonth>budget?'neg':'mut'}">${spentMonth>budget?`${fmt(spentMonth-budget,bCur)} over`:`${fmt(budget-spentMonth,bCur)} left`}</span></div>
+      <div class="meter${spentMonth>budget?' over':''}"><div style="width:${Math.min(100,spentMonth/budget*100).toFixed(1)}%"></div></div>
+      <p class="mut" style="margin:0;font-size:13px">At this pace you will spend about ${fmt(pace,bCur)} by the end of the month${pace>budget?', which is over budget':''}.</p>` : '<p class="mut" style="margin:0">Set a limit for your share of spending each month.</p>') +
+    `<form class="inline" id="budget-form"><input id="bud-amt" inputmode="decimal" placeholder="Monthly limit" value="${budget?centsStr(budget):''}" aria-label="Monthly limit"><select id="bud-cur" aria-label="Budget currency">${CURS.map(c=>`<option${c===bCur?' selected':''}>${c}</option>`).join('')}</select><button class="btn" type="submit">Save</button></form>`}</div></section>
+    <section class="card"><div class="card-h"><h2>Who paid most</h2></div><div class="rows">${Object.entries(payers).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([p,v])=>`<div class="prow">${avatar(p,true)}<div class="who"><b>${esc(nm(p,true))}</b><span>${total?Math.round(v/total*100):0}% of spending</span></div><div class="amt">${fmt(v,cur)}</div></div>`).join('') || '<div class="empty"><p>Nothing in this period.</p></div>'}</div></section></div>`;
+  return html;
+}
+
+/* ---------- dialogs ---------- */
+const dlg = $('#dlg');
+function openDialog(html, mount){ dlg.innerHTML = html; if (!dlg.open) dlg.showModal(); mount?.(); }
+function closeDialog(){ if (dlg.open) dlg.close(); }
+dlg.addEventListener('click', e=>{ if (e.target===dlg) closeDialog(); });
+function askConfirm(title, msg, label){
+  return new Promise(res=>{
+    openDialog(`<div class="dlg"><header class="dlg-head"><h2>${title}</h2></header><div class="dlg-scroll"><p style="margin:0">${msg}</p></div>
+      <footer class="dlg-foot"><span class="sp"><button class="btn ghost" id="cf-no">Cancel</button><button class="btn primary" id="cf-yes">${label}</button></span></footer></div>`);
+    $('#cf-no').onclick = ()=>{ closeDialog(); res(false); };
+    $('#cf-yes').onclick = ()=>{ closeDialog(); res(true); };
+    dlg.addEventListener('close', ()=>res(false), {once:true});
+  });
+}
+const head = (t) => `<header class="dlg-head"><h2>${t}</h2><button type="button" class="icon-btn" data-act="close-dlg" aria-label="Close">×</button></header>`;
+const curOpts = sel => CURS.map(c=>`<option${c===sel?' selected':''}>${c}</option>`).join('');
+
+/* expense form */
+let F = null;
+function poolFor(gid){
+  if (gid && S.groups[gid]) return S.groups[gid].memberIds.filter(id=>S.people[id] && !S.people[id].deleted);
+  return peopleList().map(p=>p.id);
+}
+function openExpense(id, pre={}){
+  const e = id ? S.expenses[id] : null;
+  if (e?.type==='payment') return openSettle({editId:id});
+  const gid = e ? (e.groupId||'') : (pre.gid ?? (S.view.name==='group' ? S.view.id : ''));
+  const g = S.groups[gid]; const pool = poolFor(gid); const me = meId();
+  const toStr = m => Object.fromEntries(Object.entries(m||{}).map(([k,v])=>[k,centsStr(v)]));
+  if (e) F = {id, desc:e.desc, cat:e.category||'other', amount:centsStr(e.amount), cur:e.currency, date:e.date, gid, notes:e.notes||'', repeat:'none', receiptId:e.receiptId||null, file:null,
+    payer: Object.keys(e.paid).length===1 ? Object.keys(e.paid)[0] : 'multi', paidVals:toStr(e.paid), method:e.split?.method||'exact',
+    sel:new Set(Object.keys(e.owed)), vals: e.split?.vals ? {...e.split.vals} : toStr(e.owed), catTouched:true};
+  else {
+    const withF = S.view.name==='friend' ? S.view.id : null;
+    F = {id:null, desc:'', cat:'other', amount:'', cur:g?.currency || S.prefs.currency || 'MDL', date:todayISO(), gid, notes:'', repeat:'none', receiptId:null, file:null,
+      payer: pool.includes(me) ? me : (pool[0]||''), paidVals:{}, method:'equal', sel:new Set(withF && me ? [me, withF] : pool), vals:{}, catTouched:false};
+  }
+  const groups = groupList();
+  openDialog(`<form class="dlg" id="xf" novalidate>${head(id?'Edit expense':'Add an expense')}<div class="dlg-scroll">
+    <div class="row2"><label class="fld grow">Description<input id="f-desc" maxlength="80" placeholder="e.g. Dinner at the lake" value="${esc(F.desc)}" autocomplete="off"></label>
+      <label class="fld">Category<select id="f-cat">${CATS.map(c=>`<option value="${c.k}"${c.k===F.cat?' selected':''}>${c.l}</option>`).join('')}</select></label></div>
+    <div class="row2"><label class="fld grow">Amount<input id="f-amt" inputmode="decimal" placeholder="0.00, or a sum like 120+35.5" value="${esc(F.amount)}" autocomplete="off"></label>
+      <label class="fld">Currency<select id="f-cur">${curOpts(F.cur)}</select></label>
+      <label class="fld">Date<input id="f-date" type="date" value="${F.date}"></label></div>
+    <label class="fld">Group<select id="f-group">${groups.map(g=>`<option value="${g.id}"${g.id===gid?' selected':''}>${esc(g.name)}</option>`).join('')}<option value=""${gid===''?' selected':''}>No group (between friends)</option></select></label>
+    <div id="f-dyn" style="display:flex;flex-direction:column;gap:14px"></div>
+    <div id="f-sum" class="sum" aria-live="polite"></div>
+    <details class="more"${F.notes||F.receiptId?' open':''}><summary>Notes, receipt, repeat</summary><div class="morein">
+      <label class="fld">Notes<textarea id="f-notes" maxlength="500" placeholder="Anything worth remembering">${esc(F.notes)}</textarea></label>
+      ${S.assets || F.receiptId ? `<label class="fld">Receipt photo${F.receiptId?` <span class="mut">(one attached; choosing a new file replaces it)</span>`:''}${S.assets?'<input id="f-file" type="file" accept="image/*,application/pdf">':''}</label>` : ''}
+      ${!id ? `<label class="fld">Repeat<select id="f-repeat">${Object.entries(FREQ).map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select></label>` : ''}
+    </div></details>
+    <p class="err-t" id="f-err" hidden></p></div>
+    <footer class="dlg-foot"><span class="sp"><button type="button" class="btn ghost" data-act="close-dlg">Cancel</button><button class="btn primary" type="submit" id="f-save">Save</button></span></footer></form>`, ()=>{
+      renderDyn(); updateSum();
+      const form = $('#xf');
+      form.addEventListener('input', onFormInput);
+      form.addEventListener('change', onFormChange);
+      form.addEventListener('submit', saveExpense);
+      if (!id) $('#f-desc').focus();
+    });
+}
+function renderDyn(){
+  const pool = poolFor(F.gid);
+  const names = pool.map(id=>[id, nm(id,true)]);
+  if (!pool.length) { $('#f-dyn').innerHTML = `<div class="note warn"><p>This group has no members. Edit the group to add people first.</p></div>`; return; }
+  if (F.payer!=='multi' && !pool.includes(F.payer)) F.payer = pool.includes(meId()) ? meId() : pool[0];
+  const unit = (F.method==='percent') ? '%' : (F.method==='shares') ? '×' : (F.method==='adjust') ? '±' : '';
+  $('#f-dyn').innerHTML = `
+    <label class="fld">Paid by<select id="f-payer">${names.map(([id,n])=>`<option value="${id}"${F.payer===id?' selected':''}>${esc(n)}</option>`).join('')}<option value="multi"${F.payer==='multi'?' selected':''}>Several people…</option></select></label>
+    ${F.payer==='multi' ? `<div class="parts" aria-label="How much each person paid">${names.map(([id,n])=>`<div class="part"><label for="pv-${id}">${avatar(id,true)}<span>${esc(n)}</span></label><input type="text" inputmode="decimal" id="pv-${id}" data-pv="${id}" value="${esc(F.paidVals[id]||'')}" placeholder="0.00"></div>`).join('')}</div>` : ''}
+    <div class="sub-h"><span>Split</span>${F.method==='equal'||F.method==='adjust'?`<span><button type="button" class="link" data-act="f-all">All</button> · <button type="button" class="link" data-act="f-none">None</button></span>`:''}</div>
+    <div class="seg" role="group" aria-label="Split method">${METHODS.map(([k,l])=>`<button type="button" class="${F.method===k?'on':''}" data-act="f-method" data-m="${k}">${l}</button>`).join('')}</div>
+    <div class="parts">${names.map(([id,n])=>{
+      const box = (F.method==='equal'||F.method==='adjust');
+      return `<div class="part"><label for="${box?'sel-'+id:'v-'+id}">${box?`<input type="checkbox" id="sel-${id}" data-sel="${id}"${F.sel.has(id)?' checked':''}>`:''}${avatar(id,true)}<span>${esc(n)}</span></label>
+        ${F.method!=='equal' ? `<span class="unit">${unit}</span><input type="text" inputmode="decimal" id="v-${id}" data-v="${id}" value="${esc(F.vals[id]||'')}" placeholder="${F.method==='shares'?'1':'0'}">` : ''}
+        <span class="share" id="sh-${id}"></span></div>`; }).join('')}</div>
+    <p class="mut" style="margin:0;font-size:13px">${{equal:'Everyone ticked pays the same.',exact:'Type how much each person owes. Leave blank for people not involved.',percent:'Percentages must add up to 100.',shares:'For example, 2 shares for a couple and 1 for a single person.',adjust:'Add or subtract an amount for someone, for example +20 for a starter only they had. The rest is split equally.'}[F.method]}</p>`;
+}
+function splitIds(pool){
+  if (F.method==='equal'||F.method==='adjust') return pool.filter(id=>F.sel.has(id));
+  if (F.method==='exact') return pool.filter(id=>(parseMoney(F.vals[id]||'')||0)!==0);
+  return pool.filter(id=>(evalExpr(F.vals[id]||'')||0)>0);
+}
+function computeSplit(total){
+  const pool = poolFor(F.gid); const ids = splitIds(pool);
+  if (!ids.length) return {error:'Choose who this expense is split between.'};
+  if (F.method==='equal') return {owed: allocate(total, ids.map(id=>[id,1]))};
+  if (F.method==='exact') {
+    const owed = {}; let s = 0;
+    for (const id of ids) { const c = parseMoney(F.vals[id]); if (c==null || c<0) return {error:`Check the amount for ${nm(id)}.`}; owed[id] = c; s += c; }
+    if (s!==total) return {owed, error: s<total ? `${fmt(total-s,F.cur)} is not assigned to anyone yet.` : `The amounts are ${fmt(s-total,F.cur)} more than the total.`};
+    return {owed};
+  }
+  if (F.method==='percent') {
+    const s = ids.reduce((a,id)=>a+evalExpr(F.vals[id]),0);
+    if (Math.abs(s-100)>0.001) return {error:`Percentages add up to ${+s.toFixed(2)}%. They need to add up to 100%.`};
+    return {owed: allocate(total, ids.map(id=>[id, evalExpr(F.vals[id])]))};
+  }
+  if (F.method==='shares') return {owed: allocate(total, ids.map(id=>[id, evalExpr(F.vals[id])]))};
+  if (F.method==='adjust') {
+    const adj = {}; let s = 0;
+    for (const id of ids) { const c = parseMoney(F.vals[id]||'0') ?? null; if (c==null) return {error:`Check the adjustment for ${nm(id)}.`}; adj[id] = c; s += c; }
+    if (s>total) return {error:'The adjustments are more than the total.'};
+    const base = allocate(total-s, ids.map(id=>[id,1]));
+    const owed = {}; for (const id of ids) { owed[id] = base[id]+adj[id]; if (owed[id]<0) return {error:`${nm(id,true)} would end up with a negative share.`}; }
+    return {owed};
+  }
+}
+function computePaid(total){
+  if (F.payer!=='multi') return {paid:{[F.payer]:total}};
+  const paid = {}; let s = 0;
+  for (const id of poolFor(F.gid)) { const v = F.paidVals[id]; if (!v) continue; const c = parseMoney(v); if (c==null||c<0) return {error:`Check what ${nm(id)} paid.`}; if (c) { paid[id] = c; s += c; } }
+  if (!s) return {error:'Enter how much each person paid.'};
+  if (s!==total) return {paid, error:`The payers add up to ${fmt(s,F.cur)}, but the total is ${fmt(total,F.cur)}.`};
+  return {paid};
+}
+function updateSum(){
+  const total = parseMoney(F.amount);
+  const sum = $('#f-sum'); if (!sum) return;
+  for (const id of poolFor(F.gid)) { const el = $('#sh-'+id); if (el) el.textContent = ''; }
+  if (!total || total<=0) { sum.className = 'sum'; sum.textContent = F.amount.trim() ? 'Enter an amount above zero.' : 'Enter the amount to see each person’s share.'; return; }
+  const sp = computeSplit(total); const pd = computePaid(total);
+  if (sp.owed) for (const [id,c] of Object.entries(sp.owed)) { const el = $('#sh-'+id); if (el) el.textContent = fmt(c, F.cur); }
+  const err = pd.error || sp.error;
+  sum.className = 'sum ' + (err ? 'err' : 'ok');
+  if (err) { sum.textContent = err; return; }
+  const n = Object.keys(sp.owed).length;
+  const exprNote = /[+\-*/]/.test(F.amount.replace(/^-/,'')) ? `${fmt(total,F.cur)} in total. ` : '';
+  sum.textContent = `${exprNote}Split between ${n} ${n===1?'person':'people'}${F.method==='equal'&&n>1?`, ${fmt(Math.floor(total/n),F.cur)} each`:''}.`;
+}
+function onFormInput(e){
+  const t = e.target;
+  if (t.id==='f-desc') { F.desc = t.value; if (!F.catTouched) { const g = guessCat(t.value); if (g) { F.cat = g; $('#f-cat').value = g; } } return; }
+  if (t.id==='f-amt') F.amount = t.value;
+  if (t.id==='f-notes') F.notes = t.value;
+  if (t.dataset.v) F.vals[t.dataset.v] = t.value;
+  if (t.dataset.pv) F.paidVals[t.dataset.pv] = t.value;
+  updateSum();
+}
+function onFormChange(e){
+  const t = e.target;
+  if (t.id==='f-cat') { F.cat = t.value; F.catTouched = true; }
+  if (t.id==='f-cur') { F.cur = t.value; updateSum(); }
+  if (t.id==='f-date') F.date = t.value;
+  if (t.id==='f-repeat') F.repeat = t.value;
+  if (t.id==='f-file') F.file = t.files[0] || null;
+  if (t.id==='f-group') { F.gid = t.value; const g = S.groups[F.gid]; if (g && !F.id) { F.cur = g.currency; $('#f-cur').value = g.currency; } F.sel = new Set(poolFor(F.gid)); renderDyn(); updateSum(); }
+  if (t.id==='f-payer') { F.payer = t.value; if (t.value==='multi' && !Object.keys(F.paidVals).length && parseMoney(F.amount)) F.paidVals = {}; renderDyn(); updateSum(); }
+  if (t.dataset.sel) { t.checked ? F.sel.add(t.dataset.sel) : F.sel.delete(t.dataset.sel); updateSum(); }
+}
+async function saveExpense(ev){
+  ev.preventDefault();
+  const err = m => { const el = $('#f-err'); el.textContent = m; el.hidden = false; };
+  const total = parseMoney(F.amount);
+  if (!F.desc.trim()) return err('Add a short description, such as “Groceries”.');
+  if (!total || total<=0) return err('Enter an amount above zero.');
+  if (!F.date) return err('Pick a date.');
+  const pd = computePaid(total); if (pd.error) return err(pd.error);
+  const sp = computeSplit(total); if (sp.error) return err(sp.error);
+  const btn = $('#f-save'); btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    let receiptId = F.receiptId;
+    if (F.file && S.assets) { const up = await S.assets.upload(F.file); receiptId = up.id; }
+    const owed = Object.fromEntries(Object.entries(sp.owed).filter(([,v])=>v>0));
+    const keepVals = F.method==='equal' ? {} : Object.fromEntries(splitIds(poolFor(F.gid)).map(id=>[id, String(F.vals[id]||'')]));
+    const body = {type:'expense', groupId:F.gid, desc:F.desc.trim(), category:F.cat, currency:F.cur, amount:total, date:F.date, paid:pd.paid, owed,
+      split:{method:F.method, vals:keepVals}, notes:F.notes.trim(), receiptId:receiptId||null};
+    if (F.id) { const old = S.expenses[F.id]; await store.set('expenses', F.id, {...old, ...body, ...stamp()}); toast('Expense updated'); }
+    else {
+      const eid = newId();
+      let recurringId = null;
+      if (F.repeat!=='none') {
+        recurringId = newId();
+        const tmpl = {...body, receiptId:null, notes:body.notes};
+        await store.set('recurring', recurringId, {groupId:F.gid, template:tmpl, freq:F.repeat, anchorDay:parseISO(F.date).getDate(), nextDate:advance(F.date, F.repeat, parseISO(F.date).getDate()), active:true, ...created()});
+      }
+      await store.set('expenses', eid, {...body, comments:[], recurringId, deleted:false, ...created()});
+      if (!S.prefs.currency || S.prefs.currency!==F.cur) setPrefs({currency:F.cur});
+      toast(F.repeat!=='none' ? `Expense added. It repeats ${F.repeat==='weekly'?'every week':F.repeat==='monthly'?'every month':'every year'}.` : 'Expense added');
+    }
+    closeDialog();
+  } catch (e) { btn.disabled = false; btn.textContent = 'Save'; err(e.message); }
+}
+function advance(dateISO, freq, anchor){
+  const d = parseISO(dateISO);
+  if (freq==='weekly') { d.setDate(d.getDate()+7); return iso(d); }
+  const y = d.getFullYear() + (freq==='yearly'?1:0), m = d.getMonth() + (freq==='monthly'?1:0);
+  const last = new Date(y, m+1, 0).getDate();
+  return iso(new Date(y, m, Math.min(anchor||d.getDate(), last)));
+}
+
+/* expense detail */
+function openDetail(id){
+  const e = S.expenses[id]; if (!e) return;
+  ensureProfiles([e.createdBy, e.updatedBy, ...(e.comments||[]).map(c=>c.by)]);
+  const me = meId(); const cat = CAT[e.category]||CAT.other;
+  const gname = e.groupId ? S.groups[e.groupId]?.name : 'No group';
+  const isPay = e.type==='payment';
+  const lines = isPay ? `<div><span>${esc(nm(Object.keys(e.paid)[0],true))} paid ${esc(nm(Object.keys(e.owed)[0]))}</span><b class="num">${fmt(e.amount,e.currency)}</b></div>`
+    : Object.entries(e.paid).map(([p,v])=>`<div><span>${esc(nm(p,true))} paid</span><b class="num">${fmt(v,e.currency)}</b></div>`).join('') + '<hr style="border:0;border-top:1px solid var(--line);margin:4px 0;width:100%">' +
+      Object.entries(e.owed).sort((a,b)=>b[1]-a[1]).map(([p,v])=>`<div><span>${esc(nm(p,true))} ${verbS(p,'owe','owes')}${(e.paid||{})[p]?' (already paid part)':''}</span><span class="num">${fmt(v,e.currency)}</span></div>`).join('');
+  const method = METHODS.find(m=>m[0]===e.split?.method)?.[1] || '';
+  openDialog(`<div class="dlg">${head(isPay?'Payment':esc(e.desc))}<div class="dlg-scroll">
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><span class="sw" style="width:16px;height:16px;background:${isPay?'var(--pos)':cat.c}"></span><span class="big">${fmt(e.amount,e.currency)}</span></div>
+    <dl class="kv"><dt>Date</dt><dd>${parseISO(e.date).toLocaleDateString(undefined,{dateStyle:'full'})}</dd><dt>Group</dt><dd>${esc(gname||'')}</dd>${isPay?'':`<dt>Category</dt><dd>${cat.l}</dd><dt>Split</dt><dd>${method}</dd>`}
+      <dt>Added</dt><dd>${esc(who(e.createdBy))}${e.createdAt?', '+new Date(e.createdAt).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}):''}${e.auto?' (repeating)':''}</dd>
+      ${e.updatedAt && e.updatedAt-(e.createdAt||0)>2000 ? `<dt>Edited</dt><dd>${esc(who(e.updatedBy))}, ${new Date(e.updatedAt).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'})}</dd>`:''}</dl>
+    <div class="det-lines">${lines}</div>
+    ${e.notes?`<div class="cmt"><small>Notes</small>${esc(e.notes)}</div>`:''}
+    ${e.receiptId?`<div><a href="/_blob/${esc(e.receiptId)}" target="_blank" rel="noopener"><img class="receipt" src="/_blob/${esc(e.receiptId)}" alt="Receipt for ${esc(e.desc||'payment')}"></a></div>`:''}
+    <div class="sub-h">Comments</div>
+    <div style="display:flex;flex-direction:column;gap:8px" id="cmts">${(e.comments||[]).map(c=>`<div class="cmt"><small>${esc(who(c.by))} · ${new Date(c.at).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'})}</small>${esc(c.text)}</div>`).join('') || '<span class="mut" style="font-size:14px">No comments yet.</span>'}</div>
+    ${S.canWrite?`<form class="inline" id="cmt-form"><input id="cmt-in" maxlength="300" placeholder="Add a comment" aria-label="Add a comment"><button class="btn" type="submit">Post</button></form>`:''}
+    </div><footer class="dlg-foot">${S.canWrite?`<button class="btn danger" data-act="del-expense" data-id="${id}">Delete</button><span class="sp"><button class="btn primary" data-act="edit-expense" data-id="${id}">Edit</button></span>`:'<span class="sp"><button class="btn" data-act="close-dlg">Close</button></span>'}</footer></div>`, ()=>{
+      const f = $('#cmt-form'); if (f) f.addEventListener('submit', async ev=>{ ev.preventDefault(); const text = $('#cmt-in').value.trim(); if (!text) return;
+        try { await store.update('expenses', id, {comments:[...(S.expenses[id].comments||[]), {by:S.uid||null, text, at:Date.now()}]}); openDetail(id); } catch (er) { toast(er.message); } });
+    });
+}
+
+/* settle up */
+function openSettle(pre={}){
+  const ex = pre.editId ? S.expenses[pre.editId] : null;
+  const me = meId(); const people = peopleList();
+  const gid = ex ? (ex.groupId||'') : (pre.gid ?? (S.view.name==='group' ? S.view.id : ''));
+  let from = ex ? Object.keys(ex.paid)[0] : pre.from, to = ex ? Object.keys(ex.owed)[0] : pre.to;
+  if (!from && !to) { // suggest the first debt involving me
+    const e1 = S.calc.edges.find(x=>(gid==='' || x.gid===gid) && (x.from===me||x.to===me)) || S.calc.edges.find(x=>x.gid===gid);
+    if (e1) { from = e1.from; to = e1.to; pre.amt = e1.amt; pre.cur = e1.cur; }
+  }
+  from ||= me || people[0]?.id; to ||= people.find(p=>p.id!==from)?.id;
+  const amt = ex ? centsStr(ex.amount) : pre.amt ? centsStr(+pre.amt) : '';
+  const cur = ex ? ex.currency : pre.cur || S.groups[gid]?.currency || S.prefs.currency || 'MDL';
+  const opts = sel => people.map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${esc(nm(p.id,true))}</option>`).join('');
+  openDialog(`<form class="dlg" id="sf" novalidate>${head(ex?'Edit payment':'Record a payment')}<div class="dlg-scroll">
+    <div class="row2"><label class="fld">Who paid<select id="s-from">${opts(from)}</select></label><label class="fld">Paid to<select id="s-to">${opts(to)}</select></label></div>
+    <div class="row2"><label class="fld grow">Amount<input id="s-amt" inputmode="decimal" value="${amt}" placeholder="0.00"></label><label class="fld">Currency<select id="s-cur">${curOpts(cur)}</select></label><label class="fld">Date<input type="date" id="s-date" value="${ex?ex.date:todayISO()}"></label></div>
+    <label class="fld">Group<select id="s-group">${groupList().map(g=>`<option value="${g.id}"${g.id===gid?' selected':''}>${esc(g.name)}</option>`).join('')}<option value=""${gid===''?' selected':''}>No group</option></select></label>
+    <label class="fld">Note<input id="s-notes" maxlength="120" placeholder="e.g. Cash, bank transfer, MIA" value="${esc(ex?.notes||'')}"></label>
+    <p class="mut" style="margin:0;font-size:13px">This records money that changed hands outside the app. Evenly does not send money.</p>
+    <p class="err-t" id="s-err" hidden></p></div>
+    <footer class="dlg-foot">${ex?`<button type="button" class="btn danger" data-act="del-expense" data-id="${pre.editId}">Delete</button>`:''}<span class="sp"><button type="button" class="btn ghost" data-act="close-dlg">Cancel</button><button class="btn primary" type="submit">Save payment</button></span></footer></form>`, ()=>{
+      $('#sf').addEventListener('submit', async ev=>{
+        ev.preventDefault();
+        const err = m => { const el = $('#s-err'); el.textContent = m; el.hidden = false; };
+        const f = $('#s-from').value, t = $('#s-to').value, a = parseMoney($('#s-amt').value);
+        if (!f || !t || f===t) return err('Choose two different people.');
+        if (!a || a<=0) return err('Enter an amount above zero.');
+        const g = $('#s-group').value;
+        const body = {type:'payment', groupId:g, desc:'Payment', category:'other', currency:$('#s-cur').value, amount:a, date:$('#s-date').value||todayISO(), paid:{[f]:a}, owed:{[t]:a}, notes:$('#s-notes').value.trim()};
+        try {
+          if (ex) await store.set('expenses', pre.editId, {...ex, ...body, ...stamp()});
+          else await store.set('expenses', newId(), {...body, comments:[], deleted:false, ...created()});
+          closeDialog(); toast(ex ? 'Payment updated' : `Recorded: ${nm(f,true)} paid ${nm(t)} ${fmt(a, body.currency)}`);
+        } catch (e) { err(e.message); }
+      });
+    });
+}
+
+/* group form */
+function openGroup(id){
+  const g = id ? S.groups[id] : null; const me = meId();
+  const sel = new Set(g ? g.memberIds : (me ? [me] : []));
+  const people = peopleList();
+  openDialog(`<form class="dlg" id="gf" novalidate>${head(id?'Edit group':'New group')}<div class="dlg-scroll">
+    <div class="row2"><label class="fld grow">Name<input id="g-name" maxlength="50" placeholder="e.g. Flat on Ștefan cel Mare" value="${esc(g?.name||'')}"></label>
+      <label class="fld">Type<select id="g-kind">${KINDS.map(k=>`<option${k===(g?.kind||'Trip')?' selected':''}>${k}</option>`).join('')}</select></label>
+      <label class="fld">Currency<select id="g-cur">${curOpts(g?.currency || S.prefs.currency || 'MDL')}</select></label></div>
+    <div class="fld">Members<div class="chk" id="g-mem">${people.map(p=>`<label><input type="checkbox" value="${p.id}"${sel.has(p.id)?' checked':''}>${avatar(p.id,true)}${esc(nm(p.id,true))}</label>`).join('') || '<span class="mut">No people yet. Add them below.</span>'}</div></div>
+    <label class="fld">Add new people<input id="g-new" placeholder="Names separated by commas, e.g. Ana, Ion, Maria" maxlength="300"></label>
+    <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px"><input type="checkbox" id="g-simp"${g?.simplify===false?'':' checked'} style="margin-top:4px"><span><b>Simplify debts</b><br><span class="mut">Combine debts so the group needs fewer payments. For example, if Ana owes Ion and Ion owes Maria, Ana pays Maria directly.</span></span></label>
+    <p class="err-t" id="g-err" hidden></p></div>
+    <footer class="dlg-foot"><span class="sp"><button type="button" class="btn ghost" data-act="close-dlg">Cancel</button><button class="btn primary" type="submit">${id?'Save':'Create group'}</button></span></footer></form>`, ()=>{
+      if (!id) $('#g-name').focus();
+      $('#gf').addEventListener('submit', async ev=>{
+        ev.preventDefault();
+        const err = m => { const el = $('#g-err'); el.textContent = m; el.hidden = false; };
+        const name = $('#g-name').value.trim(); if (!name) return err('Give the group a name.');
+        const members = [...$('#g-mem').querySelectorAll('input:checked')].map(i=>i.value);
+        const newNames = $('#g-new').value.split(',').map(s=>s.trim()).filter(Boolean);
+        if (id) {
+          const net = memberNet(id);
+          const removed = g.memberIds.filter(x=>!members.includes(x));
+          const stuck = removed.filter(x=>Object.values(net).some(m=>m[x]));
+          if (stuck.length) return err(`${stuck.map(x=>nm(x,true)).join(', ')} still ${stuck.length>1?'have':'has'} a balance in this group. Settle up before removing them.`);
+        }
+        try {
+          for (const n of newNames) {
+            const existing = peopleList().find(p=>p.name.toLowerCase()===n.toLowerCase());
+            if (existing) { members.push(existing.id); continue; }
+            const pid = newId(); await store.set('people', pid, {name:n.slice(0,40), deleted:false, ...created()}); members.push(pid);
+          }
+          const uniq = [...new Set(members)];
+          if (uniq.length<1) return err('Add at least one member.');
+          const body = {name, kind:$('#g-kind').value, currency:$('#g-cur').value, memberIds:uniq, simplify:$('#g-simp').checked};
+          if (id) { await store.set('groups', id, {...g, ...body, ...stamp()}); toast('Group saved'); }
+          else { const gid = newId(); await store.set('groups', gid, {...body, deleted:false, ...created()}); S.view = {name:'group', id:gid, tab:'expenses'}; toast('Group created'); }
+          closeDialog(); render();
+        } catch (e) { err(e.message); }
+      });
+    });
+}
+
+/* person form */
+function openPerson(id){
+  const p = id ? S.people[id] : null;
+  openDialog(`<form class="dlg" id="pf" novalidate>${head(id?'Edit friend':'Add a friend')}<div class="dlg-scroll">
+    <label class="fld">Name<input id="p-name" maxlength="40" value="${esc(p?.name||'')}" placeholder="e.g. Maria"></label>
+    ${!id && groupList().length ? `<div class="fld">Also add to groups<div class="chk" id="p-groups">${groupList().map(g=>`<label><input type="checkbox" value="${g.id}"${S.view.name==='group'&&S.view.id===g.id?' checked':''}>${esc(g.name)}</label>`).join('')}</div></div>` : ''}
+    <p class="mut" style="margin:0;font-size:13px">Friends do not need an account. To let them see the balances too, share this page with them.</p>
+    <p class="err-t" id="p-err" hidden></p></div>
+    <footer class="dlg-foot"><span class="sp"><button type="button" class="btn ghost" data-act="close-dlg">Cancel</button><button class="btn primary" type="submit">${id?'Save':'Add friend'}</button></span></footer></form>`, ()=>{
+      $('#p-name').focus();
+      $('#pf').addEventListener('submit', async ev=>{
+        ev.preventDefault();
+        const name = $('#p-name').value.trim();
+        if (!name) { const el = $('#p-err'); el.textContent = 'Enter a name.'; el.hidden = false; return; }
+        try {
+          if (id) await store.set('people', id, {...p, name, ...stamp()});
+          else {
+            const pid = newId(); await store.set('people', pid, {name, deleted:false, ...created()});
+            for (const inp of [...document.querySelectorAll('#p-groups input:checked')]) { const g = S.groups[inp.value]; await store.update('groups', inp.value, {memberIds:[...g.memberIds, pid], ...stamp()}); }
+          }
+          closeDialog(); toast(id ? 'Saved' : `${name} added`);
+        } catch (e) { const el = $('#p-err'); el.textContent = e.message; el.hidden = false; }
+      });
+    });
+}
+
+/* ---------- recurring ---------- */
+let recurBusy = false;
+async function runRecurring(){
+  if (recurBusy || !allLoaded() || !S.canWrite) return;
+  recurBusy = true;
+  try {
+    const today = todayISO();
+    for (const [rid, r0] of Object.entries(S.recurring)) {
+      let r = r0;
+      if (!r.active || r.nextDate > today) continue;
+      if (r.groupId && (!S.groups[r.groupId] || S.groups[r.groupId].deleted)) continue;
+      if (DB) {
+        const ref = DB.collection('recurring').doc(rid);
+        const lease = await ref.acquire({holder:S.tabId, ttlMs:20000}); if (!lease.acquired) continue;
+        const snap = await ref.get(); if (!snap.exists) continue; r = snap.data();
+        if (!r.active || r.nextDate > today) continue;
+      }
+      let next = r.nextDate, n = 0;
+      while (next <= today && n < 24) {
+        await store.set('expenses', newId(), {...r.template, date:next, comments:[], deleted:false, recurringId:rid, auto:true, createdAt:Date.now(), createdBy:r.createdBy||null, updatedAt:Date.now(), updatedBy:null});
+        next = advance(next, r.freq, r.anchorDay); n++;
+      }
+      await store.update('recurring', rid, {nextDate:next});
+    }
+  } catch (e) { console.warn('Repeating expenses', e); }
+  finally { recurBusy = false; }
+}
+
+/* ---------- example data ---------- */
+async function loadExample(){
+  try {
+    const now = Date.now(); const ex = {example:true, deleted:false, createdAt:now, createdBy:S.uid||null};
+    let me = meId();
+    const ids = {};
+    if (!me) { me = newId(); await store.set('people', me, {name:'You', ...ex}); await setPrefs({meId:me}); }
+    for (const n of ['Alex','Sam','Jordan']) { ids[n] = newId(); await store.set('people', ids[n], {name:n, ...ex}); }
+    const gid = newId();
+    const mem = [me, ids.Alex, ids.Sam, ids.Jordan];
+    await store.set('groups', gid, {name:'Example: weekend in Brașov', kind:'Trip', currency:'EUR', memberIds:mem, simplify:true, ...ex});
+    const d = k => { const x = new Date(); x.setDate(x.getDate()-k); return iso(x); };
+    const eq = (total, ids2) => allocate(total, ids2.map(i=>[i,1]));
+    const rows = [
+      {desc:'Cabin, 2 nights', category:'travel', amount:36000, date:d(9), paid:{[me]:36000}, owed:eq(36000,mem), split:{method:'equal',vals:{}}},
+      {desc:'Fuel and tolls', category:'transport', amount:8450, date:d(9), paid:{[ids.Alex]:8450}, owed:eq(8450,mem), split:{method:'equal',vals:{}}},
+      {desc:'Groceries at Kaufland', category:'groceries', amount:6230, date:d(8), paid:{[ids.Sam]:4000,[ids.Jordan]:2230}, owed:eq(6230,mem), split:{method:'equal',vals:{}}},
+      {desc:'Dinner at the old town', category:'food', amount:14800, date:d(8), paid:{[ids.Jordan]:14800}, owed:{[me]:4200,[ids.Alex]:3600,[ids.Sam]:3600,[ids.Jordan]:3400}, split:{method:'exact',vals:{[me]:'42.00',[ids.Alex]:'36.00',[ids.Sam]:'36.00',[ids.Jordan]:'34.00'}}},
+      {desc:'Bran Castle tickets', category:'fun', amount:6000, date:d(7), paid:{[ids.Alex]:6000}, owed:eq(6000,[me,ids.Alex,ids.Sam]), split:{method:'equal',vals:{}}},
+      {desc:'Coffee and pastries', category:'food', amount:2350, date:d(7), paid:{[me]:2350}, owed:eq(2350,mem), split:{method:'equal',vals:{}}},
+    ];
+    for (const [i,r] of rows.entries()) await store.set('expenses', newId(), {type:'expense', groupId:gid, currency:'EUR', notes:'', receiptId:null, comments:[], recurringId:null, ...r, ...ex, createdAt:now+i});
+    await store.set('expenses', newId(), {type:'payment', groupId:gid, desc:'Payment', category:'other', currency:'EUR', amount:3000, date:d(5), paid:{[ids.Sam]:3000}, owed:{[me]:3000}, notes:'Bank transfer', comments:[], ...ex, createdAt:now+10});
+    S.view = {name:'group', id:gid, tab:'expenses'}; render();
+    toast('Example trip loaded');
+  } catch (e) { toast(e.message); }
+}
+async function clearExample(){
+  if (!await askConfirm('Remove example data?', 'This deletes the example group, its expenses and the made-up people. Your own data stays.', 'Remove')) return;
+  try {
+    for (const [id,e] of Object.entries(S.expenses)) if (e.example) await store.del('expenses', id);
+    for (const [id,g] of Object.entries(S.groups)) if (g.example) await store.del('groups', id);
+    for (const [id,p] of Object.entries(S.people)) if (p.example) { if (S.prefs.meId===id) await setPrefs({meId:null}); await store.del('people', id); }
+    S.view = {name:'dashboard'}; render(); toast('Example data removed');
+  } catch (e) { toast(e.message); }
+}
+
+/* ---------- CSV export ---------- */
+async function exportCSV(gid){
+  const list = gid!=null ? (S.calc.byG[gid]||[]) : S.view.name==='all' ? filterList(S.calc.list, S.filt) : S.calc.list;
+  const q = v => `"${String(v??'').replace(/"/g,'""')}"`;
+  const rows = [['Date','Type','Description','Category','Group','Currency','Amount','Paid by','Split between','Notes'].map(q).join(',')];
+  for (const e of [...list].reverse()) {
+    rows.push([e.date, e.type, e.type==='payment'?`${nm(Object.keys(e.paid)[0],true)} paid ${nm(Object.keys(e.owed)[0])}`:e.desc, e.type==='payment'?'Payment':(CAT[e.category]||CAT.other).l,
+      e.groupId?S.groups[e.groupId]?.name:'Non-group', e.currency, centsStr(e.amount),
+      Object.entries(e.paid).map(([p,v])=>`${S.people[p]?.name||'?'}: ${centsStr(v)}`).join('; '),
+      Object.entries(e.owed).map(([p,v])=>`${S.people[p]?.name||'?'}: ${centsStr(v)}`).join('; '), e.notes||''].map(q).join(','));
+  }
+  const name = (gid ? S.groups[gid]?.name : 'evenly-expenses') || 'expenses';
+  const filename = name.replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-').toLowerCase() + '-' + todayISO() + '.csv';
+  if (!S.downloads) { toast('Downloads are not available here.'); return; }
+  try { await S.downloads.save({filename, data:'﻿'+rows.join('\r\n')}); } catch (e) { if (e?.code!=='cancelled' && e?.code!=='declined') toast('The file was not saved.'); }
+}
+
+/* ---------- events ---------- */
+const ACT = {
+  'nav': d => { S.view = {name:d.view, id:d.id ?? null, tab:'expenses'}; render(); window.scrollTo(0,0); },
+  'tab': d => { S.view.tab = d.tab; render(); },
+  'add-expense': () => { if (!peopleList().length) return toast('Add yourself first.'); openExpense(null); },
+  'edit-expense': d => openExpense(d.id),
+  'open-expense': d => openDetail(d.id),
+  'del-expense': async d => {
+    const e = S.expenses[d.id];
+    if (!await askConfirm(e.type==='payment'?'Delete this payment?':`Delete “${esc(e.desc)}”?`, 'Balances will update. You can restore it from Recent activity.', 'Delete')) return;
+    try { await store.update('expenses', d.id, {deleted:true, deletedAt:Date.now(), deletedBy:S.uid||null}); toast('Deleted. Restore it from Recent activity.'); } catch (er) { toast(er.message); }
+  },
+  'restore-expense': async d => { try { await store.update('expenses', d.id, {deleted:false, ...stamp()}); toast('Restored'); } catch (er) { toast(er.message); } },
+  'settle': d => openSettle({from:d.from, to:d.to, amt:d.amt, cur:d.cur, gid:d.gid}),
+  'add-group': () => openGroup(null),
+  'edit-group': () => openGroup(S.view.id),
+  'del-group': async () => {
+    const g = S.groups[S.view.id];
+    const open = S.calc.edges.some(e=>e.gid===S.view.id);
+    if (!await askConfirm(`Delete “${esc(g.name)}”?`, open ? 'Some people in this group still owe money. Deleting the group removes those balances from everyone’s totals.' : 'The group and its expenses will no longer appear.', 'Delete group')) return;
+    try { await store.update('groups', S.view.id, {deleted:true, ...stamp()}); S.view = {name:'dashboard'}; render(); toast('Group deleted'); } catch (er) { toast(er.message); }
+  },
+  'add-person': () => openPerson(null),
+  'edit-person': d => openPerson(d.id),
+  'del-person': async d => {
+    const has = S.calc.edges.some(e=>e.from===d.id||e.to===d.id);
+    if (has) return toast(`${nm(d.id,true)} still has a balance. Settle up first.`);
+    if (!await askConfirm(`Remove ${esc(S.people[d.id].name)}?`, 'Past expenses keep their name. They will no longer appear in lists or new expenses.', 'Remove')) return;
+    try { await store.update('people', d.id, {deleted:true, ...stamp()}); S.view = {name:'dashboard'}; render(); } catch (er) { toast(er.message); }
+  },
+  'stop-recur': async d => { try { await store.update('recurring', d.id, {active:false, ...stamp()}); toast('This expense will no longer repeat'); } catch (er) { toast(er.message); } },
+  'export': d => exportCSV(d.gid ?? (S.view.name==='insights' ? null : undefined)),
+  'example': () => loadExample(),
+  'clear-example': () => clearExample(),
+  'close-dlg': () => closeDialog(),
+  'f-method': d => {
+    F.method = d.m;
+    // start each method from an even split of the people currently ticked
+    const ids = poolFor(F.gid).filter(id=>F.sel.has(id)); const n = ids.length || 1; const total = parseMoney(F.amount) || 0;
+    F.vals = {};
+    if (d.m==='shares') ids.forEach(id=>F.vals[id] = '1');
+    if (d.m==='percent') { const base = Math.floor(10000/n)/100; ids.forEach((id,i)=>F.vals[id] = String(i===n-1 ? +(100-base*(n-1)).toFixed(2) : base)); }
+    if (d.m==='exact' && total) { const al = allocate(total, ids.map(id=>[id,1])); ids.forEach(id=>F.vals[id] = centsStr(al[id])); }
+    renderDyn(); updateSum();
+  },
+  'f-all': () => { F.sel = new Set(poolFor(F.gid)); renderDyn(); updateSum(); },
+  'f-none': () => { F.sel = new Set(); renderDyn(); updateSum(); },
+  'ins-basis': d => { S.ins.basis = d.k; render(); },
+};
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-act]'); if (!t || t.disabled) return;
+  const fn = ACT[t.dataset.act]; if (!fn) return;
+  e.preventDefault(); fn(t.dataset, t, e);
+});
+document.addEventListener('change', e=>{
+  const t = e.target; const k = t.dataset?.change; if (!k) return;
+  if (k==='me') setPrefs({meId:t.value||null});
+  if (k==='fgid') { S.filt.gid = t.value; render(); }
+  if (k==='fcat') { S.filt.cat = t.value; render(); }
+  if (k==='fpid') { S.filt.pid = t.value; render(); }
+  if (k==='ins-period') { S.ins.period = t.value; render(); }
+  if (k==='ins-gid') { S.ins.gid = t.value; S.ins.cur = null; render(); }
+  if (k==='ins-cur') { S.ins.cur = t.value; render(); }
+});
+let inputT;
+document.addEventListener('input', e=>{
+  const k = e.target.dataset?.input; if (!k) return;
+  if (k==='q') S.filt.q = e.target.value;
+  if (k==='gq') S.view.q = e.target.value;
+  clearTimeout(inputT); inputT = setTimeout(render, 150);
+});
+document.addEventListener('submit', async e=>{
+  if (e.target.id==='hello-form') {
+    e.preventDefault(); const name = $('#hello-name').value.trim(); if (!name) return;
+    try { const pid = newId(); await store.set('people', pid, {name, deleted:false, ...created()}); await setPrefs({meId:pid}); toast(`Welcome, ${name}. Now create a group.`); } catch (er) { toast(er.message); }
+  }
+  if (e.target.id==='budget-form') {
+    e.preventDefault(); const v = $('#bud-amt').value.trim(); const c = v ? parseMoney(v) : 0;
+    if (c==null || c<0) return toast('Enter a valid amount.');
+    await setPrefs({budget:c, budgetCur:$('#bud-cur').value}); toast(c ? 'Budget saved' : 'Budget removed');
+  }
+});
+
+/* ---------- startup ---------- */
+function startLocal(){
+  S.mode = 'local';
+  try { LOCAL = JSON.parse(localStorage.getItem(LOCAL_KEY)) || null; } catch {}
+  LOCAL ||= {people:{}, groups:{}, expenses:{}, recurring:{}};
+  for (const c of ['people','groups','expenses','recurring']) { S[c] = {...LOCAL[c]}; S.loaded[c] = true; }
+  try { S.prefs = JSON.parse(localStorage.getItem(LOCAL_KEY+'-prefs')) || {}; } catch {}
+  render(); setTimeout(runRecurring, 300);
+}
+async function start(){
+  S.tabId = newId();
+  render();
+  if (!window.claude?.use) { await new Promise(r=>setTimeout(r, 300)); if (!window.claude?.use) return startLocal(); }
+  const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+  if (!db) return startLocal();
+  DB = db; S.user = user; S.mode = 'db';
+  if (user) {
+    S.uid = await user.id();
+    const cw = await user.can('data.write'); if (cw===false) S.canWrite = false;
+  }
+  window.claude.use('assets').then(a=>{ S.assets = a; }).catch(()=>{});
+  window.claude.use('downloads').then(d=>{ S.downloads = d; }).catch(()=>{});
+  const slowT = setTimeout(()=>{ S.slow = true; render(); }, 10000);
+  let recurT;
+  for (const c of ['people','groups','expenses','recurring']) {
+    DB.collection(c).onSnapshot(snap=>{
+      S[c] = Object.fromEntries(snap.docs.map(d=>[d.id, d.data()]));
+      if (!snap.metadata.fromCache) S.loaded[c] = true;
+      if (allLoaded()) { clearTimeout(slowT); S.slow = false; clearTimeout(recurT); recurT = setTimeout(runRecurring, 800); }
+      render();
+    }, err=>{ S.loaded[c] = true; console.warn(c, err); render(); });
+  }
+  if (S.uid) DB.doc(`data/users/${S.uid}/prefs`).onSnapshot(s=>{ S.prefs = s.exists ? {...s.data()} : {}; render(); }, ()=>{});
+  else { try { S.prefs = JSON.parse(localStorage.getItem(LOCAL_KEY+'-prefs')) || {}; } catch {} }
+  render();
+}
+start();
+</script>
