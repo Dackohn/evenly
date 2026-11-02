@@ -1,0 +1,55 @@
+[Unit]
+Description=Evenly shared-expenses app
+After=network.target
+
+[Service]
+Type=exec
+User=evenly
+Group=evenly
+EnvironmentFile=/etc/evenly/evenly.env
+WorkingDirectory=/opt/evenly
+ExecStart=/opt/evenly/.venv/bin/uvicorn app.main:app --uds /run/evenly/app.sock --workers 1 --no-access-log --no-server-header --log-level warning
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+# ---- containment: the app can touch only its own data dir and socket ----
+# No network at all: nginx reaches it through the unix socket in /run/evenly.
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+IPAddressDeny=any
+# Filesystem: everything read-only, /home,/root hidden, other services' data made inaccessible.
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/evenly /run/evenly
+InaccessiblePaths=-/opt/stattools -/var/lib/stattools -/etc/ssl/dackohn -/etc/letsencrypt -/var/www -/var/backups -/var/log -/etc/nginx -/root
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectProc=invisible
+ProcSubset=pid
+# Kernel and privilege lockdown.
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+# Resource caps so a runaway request cannot starve the other sites on this server.
+MemoryMax=512M
+TasksMax=64
+CPUQuota=100%
+
+[Install]
+WantedBy=multi-user.target

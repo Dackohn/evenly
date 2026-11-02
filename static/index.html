@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<title>Evenly</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/app.css">
+<script type="module" src="js/main.js"></script>
+</head>
+<body>
+<div id="auth" hidden></div>
+<div class="app" id="app">
+  <aside class="side" id="side"></aside>
+  <main class="main"><div class="wrap" id="view"><p class="loading">Opening your ledger…</p></div></main>
+  <button class="btn primary fab" data-act="add-expense" id="fab" hidden>+ Add expense</button>
+</div>
+<dialog id="dlg"></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

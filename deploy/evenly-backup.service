@@ -1,0 +1,24 @@
+[Unit]
+Description=Evenly nightly backup (database snapshot + receipts)
+
+[Service]
+Type=oneshot
+User=evenly
+Group=evenly
+EnvironmentFile=/etc/evenly/evenly.env
+WorkingDirectory=/opt/evenly
+ExecStart=/opt/evenly/.venv/bin/python /opt/evenly/manage.py backup /var/backups/evenly 14
+UMask=0077
+PrivateNetwork=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/evenly /var/backups/evenly
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+SystemCallFilter=@system-service
